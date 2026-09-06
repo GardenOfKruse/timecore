@@ -1,0 +1,55 @@
+{
+  "name": "timecore",
+  "version": "1.0.0",
+  "description": "TIMECORE · 悬浮式三维时间核心（时区时钟/绝对节点倒计时/网络校时/击拍判定/ADB 齐射）",
+  "main": "electron/main.js",
+  "author": "GardenOfKruse",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GardenOfKruse/timecore.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "serve": "python -m http.server 8377",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.gardenofkruse.timecore",
+    "productName": "TIMECORE",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "css/**",
+      "js/**",
+      "vendor/**",
+      "electron/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "TIMECORE-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "TIMECORE-Portable-${version}.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
