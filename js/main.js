@@ -43,11 +43,17 @@
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
 
+  /* 首次启动判定：tc.welcomed 未写入且没有任何偏好键 → 全新用户；
+   * 老版本升级用户（已有偏好）不受打扰。判断实际状态而非版本号 */
+  const PREF_KEYS = ['tc.cd', 'tc.vol', 'tc.mute', 'tc.tick', 'tc.softlead', 'tc.track',
+    'tc.opacity', 'tc.compact', 'tc.zerofx', 'tc.xparent', 'tc.adb.v1', 'tc.freerun', 'tc.welcomed'];
+
   function boot() {
+    TC.fresh = !localStorage.getItem('tc.welcomed') && !PREF_KEYS.some(k => localStorage.getItem(k) != null);
     TC.Scene.init(document.getElementById('scene'));
     TC.UI.init();
-    // 节拍器开机自启（持久化状态，默认开）
-    if (localStorage.getItem('tc.freerun') !== '0') TC.Beats.toggleFreerun(true);
+    // 节拍器开机自启（持久化）；全新用户交给欢迎卡处理——按钮点击顺带完成音频解锁手势
+    if (!TC.fresh && localStorage.getItem('tc.freerun') !== '0') TC.Beats.toggleFreerun(true);
     keepAwake();
     requestAnimationFrame(t => { frame.last = t; requestAnimationFrame(frame); });
     TC.time.sync();

@@ -32,8 +32,13 @@
 - 循环 #14：✅ 已完成（2026-09-06）——ADB 配置即时生效：任何配置变更（启停/提前量/坐标/次数/间隔/设备勾选/精准模式等）经 save() 统一钩子触发去抖 300ms 重排布防，取消未发射定时器并按最新配置重排；已过节点跳过不补发；执行中脚本进程不动；扫描发现设备变化同样触发重排。E2E：启用 2 路 → 停用 0 路 → 再启用 2 路 ✓。图标生成脚本完成（build/icon.ico）。开源发布规划按用户要求延后
 - 循环 #15：✅ 已完成（2026-09-06）——用户全权委托推荐方案：①中心 3D 换**程序化星球**（值噪声大陆/深海/极地纹理 + 独立云层 + BackSide 大气辉光 shader + 节拍弹跳，玻璃环体与旧内核移除，金属轨道变为卫星轨道）②**adb 一键下载**（无 adb 环境从 dl.google.com 拉取 platform-tools 自动解压到 userData，检测候选含该路径）③状态色系统（面板边框随倒计时阶段变色）④到点反馈三档（低/中/高：闪光/冲击波/粒子/震屏强度分档）⑤分轨音量（提示/到点/击拍三条独立推子，tc.track 持久化）⑥README 开源化（下载安装/ADB 准备/发布流程/License）+ .gitignore dist。全量回归全绿（全屏还原/等比/选点/持久化/重排）+ 星球视觉截图 docs/planet.png
 - 循环 #16：✅ 已完成（2026-09-06）——**开源发布上线**：time-core 独立 git 仓库（main 分支）→ API 建仓 GardenOfKruse/timecore（本地 GCM 凭证，token 零回显）→ 推送代码 → tag v1.0.0 → GitHub Actions 自动构建成功 → Release v1.0.0 已发布（TIMECORE-Setup-1.0.0.exe 78MB + Portable 78MB + latest.yml/blockmap）。发布流水线后续发版只需：改 version → tag → push。
+- 循环 #19：✅ 已完成（2026-09-06）——首体验版本 v1.1：①窗口尺寸三预设（迷你380×300/紧凑660×460/标准1180×760，C键或Ctrl+1/2/3循环，保持中心+钳制工作区，全屏中先退出）+ 位置尺寸记忆（tc-window.json，全屏期间不覆盖）+ 密度随宽度自适应（body.mini/compact，手动拖拽也跟随）②ADB 默认停用（新 profile；老用户存值不受影响）+ 抽屉未启用整体置灰门槛（.adb-gate）+ 四步引导卡（开启→装adb→连设备→启用动作，含未授权提示与"不用ADB"出口）③首启欢迎卡（仅全新 profile：tc.welcomed 判定实际偏好键而非版本号；「开启节拍器」按钮顺带完成 AudioContext 解锁手势，修复"静音节拍器"准bug；静默进入则写 tc.freerun=0）④开始/停止按钮状态化（运行中→「重新布防」，空闲时停止禁用）⑤标题栏状态灯三颗（校时/ADB/音频）⑥第三方库评估：结论为零依赖不引入（自研视觉语言+组件覆盖成本高于手写+透明窗口假设风险）。E2E 23/23（双阶段：全新动线+重启记忆），证据 docs/welcome.png、size-mini.png、size-compact.png、adb-guide.png
 - 循环 #18：✅ 已完成（2026-09-06）——应用图标定稿（Codex 星球图 1254² → nativeImage best 缩放 256² → ICO）+ BrowserWindow 窗口图标（npm start 即见）→ **Release v1.0.1 已发布**（Setup 78MB，含星球图标与全部体验修复）。用户确认"就用 Codex 生成的这个"
 - 循环 #17：✅ 已完成（2026-09-06）——①贡献者身份修正：提交原用全局 git 配置（Gitee 身份 CN-Yi），改为仓库级 GardenOfKruse + GitHub noreply 邮箱（128662648+GardenOfKruse@users.noreply.github.com），orphan 重写单提交历史强推，GitHub 已正确归属 ②打包产物收敛为单个 Windows 安装包（移除 Portable target）③electron-builder 默认创建草稿 Release → PATCH draft:false 正式发布（Release Notes 已写）。E2E：构建 success ✓ 提交归属 GardenOfKruse ✓ Release latest draft:false ✓ 仅 Setup 产物 ✓
+
+## 循环 #19
+
+用户三点需求：窗口尺寸切换与适配、首启 ADB 引导、开始按钮常亮疑问。分析先行（评估+盲点清单已用户确认），实现四层：electron 主进程 PRESETS/clampToWork/saveBounds（resize/move 去抖、close 兜底、fsState 期间跳过）；ui.js 尺寸循环+密度自适应+欢迎卡+syncRunState+状态灯；adb.js DEF.enabled=false+renderGuide 四步链+dataset.on 门槛+bus 外发 adb:state。测试教训：Windows 下 child.kill() 是硬终止，leveldb 未落盘导致阶段B全挂——测试必须先走 electronAPI.send('close') 优雅退出再等进程退出。截图脚本用新 profile 时欢迎卡会挡画面（另修：wl-card 加 max-height+overflow，compact/mini 档减化内容）。
 
 ## 循环 #17
 

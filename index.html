@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=124">
+<link rel="stylesheet" href="css/style.css?v=125">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -29,7 +29,7 @@
   <nav class="panel ctrl-panel" data-testid="ctrl">
     <button id="btn-mute" title="静音 (M)">♪</button>
     <button id="btn-freerun" title="自由节拍器 (B)">⌁</button>
-    <button id="btn-compact" title="小窗模式 (C)">▢</button>
+    <button id="btn-compact" title="窗口尺寸：迷你 / 紧凑 / 标准 (C)">▢</button>
     <button id="btn-fullscreen" title="全屏 (F)">⛶</button>
     <button id="btn-adb" title="ADB 齐射（仅桌面端）">ADB</button>
     <button id="btn-settings" title="设置">⚙</button>
@@ -96,8 +96,8 @@
     </div>
     <label class="row btns"><span>窗口透明度</span><input id="set-opacity" type="range" min="30" max="100" step="5" value="100" hidden></label>
     <label class="ck"><input id="set-xparent" type="checkbox"> 透明背景（桌面端生效）</label>
-    <div class="keys dim small">空格 / 左键 击拍 · B 节拍器 · F 全屏 · C 小窗 · M 静音 · Esc 关闭</div>
-    <div class="about dim small">TIMECORE v1.0 · 绝对时间节点驱动 · 网络校时 + 平滑回退</div>
+    <div class="keys dim small">空格 / 左键 击拍 · B 节拍器 · C 窗口尺寸 · F 全屏 · Ctrl+1/2/3 迷你/紧凑/标准 · M 静音 · Esc 关闭</div>
+    <div class="about dim small">TIMECORE v1.1 · 绝对时间节点驱动 · 网络校时 + 平滑回退</div>
   </aside>
 
   <!-- ADB 齐射抽屉（桌面端） -->
@@ -106,20 +106,21 @@
     <label class="row" style="cursor:pointer" title="关闭后不扫描、不布防、不发射，纯时间装置">
       <input id="adb-enabled" type="checkbox" style="accent-color:#39d7ff"> <b>启用 ADB 齐射</b><span class="dim small">（可选功能，关闭即纯时钟）</span>
     </label>
+    <div id="adb-guide" hidden></div>
     <div class="row"><input id="adb-path" placeholder="adb.exe 路径（留空自动检测）"><button id="adb-detect">检测</button></div>
     <div id="adb-status" class="small">—</div>
     <div class="row"><button id="adb-download" hidden>⬇ 下载 adb</button></div>
-    <div class="row"><button id="adb-scan" class="primary">扫描设备</button><input id="adb-connect" placeholder="IP:端口 无线连接"><button id="adb-connect-btn">连接</button></div>
-    <div id="adb-devices"></div>
-    <div class="row globals">
+    <div class="row adb-gate"><button id="adb-scan" class="primary">扫描设备</button><input id="adb-connect" placeholder="IP:端口 无线连接"><button id="adb-connect-btn">连接</button></div>
+    <div id="adb-devices" class="adb-gate"></div>
+    <div class="row globals adb-gate">
       <span>提前量</span><input id="adb-lead" type="number" style="width:58px"><span>ms</span>
       <label class="ck-inline" title="发射时自动扣除每台设备的实测传输延迟"><input id="adb-cal" type="checkbox">延迟校准</label>
       <label class="ck-inline" title="提前 1.8s 发出命令，由设备端 sleep 对齐到点时刻，多设备同步更精准"><input id="adb-precise" type="checkbox">预发射</label>
       <label class="ck-inline" title="只记日志，不真正执行"><input id="adb-dry" type="checkbox">演练</label>
     </div>
-    <div class="dim small" style="margin:-2px 0 6px">点击时刻 = 节点 − 提前量 − 传输延迟（自动校准）</div>
-    <div id="adb-actions"></div>
-    <div class="row">
+    <div class="dim small adb-gate" style="margin:-2px 0 6px">点击时刻 = 节点 − 提前量 − 传输延迟（自动校准）</div>
+    <div id="adb-actions" class="adb-gate"></div>
+    <div class="row adb-gate">
       <select id="adb-add-type" title="动作类型（默认连点）">
         <option value="tap">连点</option>
         <option value="wake">亮屏连点</option>
@@ -149,6 +150,21 @@
     </div>
   </div>
 
+  <!-- 首次启动欢迎卡（全新 profile 才出现；老用户升级不打扰） -->
+  <div id="welcome" hidden>
+    <div class="wl-card panel">
+      <div class="wl-logo">◉</div>
+      <h2>TIMECORE · 悬浮时间核心</h2>
+      <p class="dim">毫秒时钟 · 绝对节点倒计时 · 击拍节拍器 · ADB 多机齐射<br>点击星球或按空格即可击拍</p>
+      <div class="wl-btns">
+        <button id="wl-beat" class="primary">♪ 开启节拍器，进入</button>
+        <button id="wl-adb">⚙ 配置 ADB 齐射（可选）</button>
+        <button id="wl-skip" class="ghost">直接进入</button>
+      </div>
+      <div class="wl-note dim small">网络校时在后台自动进行 · 随时按 B 开关节拍器 · C 切换窗口尺寸</div>
+    </div>
+  </div>
+
   <div id="toast" data-testid="toast"></div>
   <div id="flash"></div>
 
@@ -156,6 +172,9 @@
   <header id="titlebar" hidden>
     <span class="tb-title">TIMECORE</span>
     <span class="tb-btns">
+      <span class="tb-lights" title="状态：校时 · ADB · 音频">
+        <i id="lt-sync"></i><i id="lt-adb"></i><i id="lt-aud"></i>
+      </span>
       <button id="tb-top" title="窗口置顶">置顶</button>
       <button id="tb-min" title="最小化">—</button>
       <button id="tb-fs" title="全屏">全屏</button>
@@ -166,16 +185,16 @@
 
 <noscript>TIMECORE 需要 JavaScript。</noscript>
 <script src="vendor/three.min.js"></script>
-<script src="js/core.js?v=124"></script>
-<script src="js/time-sync.js?v=124"></script>
-<script src="js/clock.js?v=124"></script>
-<script src="js/countdown.js?v=124"></script>
-<script src="js/beats.js?v=124"></script>
-<script src="js/audio.js?v=124"></script>
-<script src="js/scene3d.js?v=124"></script>
-<script src="js/ui.js?v=124"></script>
-<script src="js/adb.js?v=124"></script>
-<script src="js/main.js?v=124"></script>
-<script src="js/test.js?v=124"></script>
+<script src="js/core.js?v=125"></script>
+<script src="js/time-sync.js?v=125"></script>
+<script src="js/clock.js?v=125"></script>
+<script src="js/countdown.js?v=125"></script>
+<script src="js/beats.js?v=125"></script>
+<script src="js/audio.js?v=125"></script>
+<script src="js/scene3d.js?v=125"></script>
+<script src="js/ui.js?v=125"></script>
+<script src="js/adb.js?v=125"></script>
+<script src="js/main.js?v=125"></script>
+<script src="js/test.js?v=125"></script>
 </body>
 </html>

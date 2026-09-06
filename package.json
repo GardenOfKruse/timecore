@@ -1,6 +1,6 @@
 {
   "name": "timecore",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "TIMECORE · 悬浮式三维时间核心（时区时钟/绝对节点倒计时/网络校时/击拍判定/ADB 齐射）",
   "main": "electron/main.js",
   "author": "GardenOfKruse",

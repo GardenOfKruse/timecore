@@ -11,10 +11,37 @@ let win = null;
 let fsState = false;       // 显式全屏状态：透明窗口上 isFullScreen() 会误报，不能信任
 let prevBounds = null;
 
+/* 窗口尺寸预设（迷你/紧凑/标准）与位置记忆：bounds 存 userData/tc-window.json */
+const PRESETS = { mini: [380, 300], compact: [660, 460], standard: [1180, 760] };
+
+function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
+
+// 钳回显示器工作区：预设/记忆尺寸可能大于当前屏幕（小屏笔记本、换显示器）
+function clampToWork(b) {
+  const wa = screen.getDisplayMatching(b).workArea;
+  const w = Math.min(b.width, wa.width - 10), h = Math.min(b.height, wa.height - 10);
+  return {
+    x: Math.max(wa.x, Math.min(b.x, wa.x + wa.width - w)),
+    y: Math.max(wa.y, Math.min(b.y, wa.y + wa.height - h)),
+    width: w, height: h
+  };
+}
+
+function saveBounds() {
+  // 全屏期间不覆盖记忆，否则重开是全屏尺寸；setBounds/移窗都会触发
+  if (!win || win.isDestroyed() || fsState) return;
+  try { fs.writeFileSync(boundsFile(), JSON.stringify(win.getBounds())); } catch (_) {}
+}
+function saveBoundsSoon() { clearTimeout(saveBoundsSoon.t); saveBoundsSoon.t = setTimeout(saveBounds, 400); }
+
 function createWindow() {
+  let saved = null;
+  try { saved = JSON.parse(fs.readFileSync(boundsFile(), 'utf8')); } catch (_) {}
+  const b = saved && saved.width >= 320 && saved.height >= 240 ? clampToWork(saved) : null;
   win = new BrowserWindow({
-    width: 1180,
-    height: 760,
+    width: b ? b.width : 1180,
+    height: b ? b.height : 760,
+    ...(b ? { x: b.x, y: b.y } : {}),
     minWidth: 320,
     minHeight: 240,
     frame: false,
@@ -30,6 +57,10 @@ function createWindow() {
     }
   });
   win.setAlwaysOnTop(true, 'screen-saver');
+  // 位置/尺寸记忆：拖动、拉伸去抖保存（全屏期间由 saveBounds 自行跳过）
+  win.on('resize', saveBoundsSoon);
+  win.on('move', saveBoundsSoon);
+  win.on('close', saveBounds);
   // 外部途径引起的全屏变化（如 HTML5 全屏）也要回写显式状态
   win.on('enter-full-screen', () => { fsState = true; });
   win.on('leave-full-screen', () => { fsState = false; });
@@ -58,6 +89,19 @@ ipcMain.on('win', (ev, cmd, arg) => {
         win.setFullScreen(false);
         if (prevBounds) win.setBounds(prevBounds);
       }
+      break;
+    }
+    case 'size': {
+      // 尺寸预设：保持窗口中心不变，钳到所在显示器工作区；全屏中先退出再应用
+      const p = PRESETS[arg && arg.preset];
+      if (!p) break;
+      if (fsState) { fsState = false; win.setFullScreen(false); }
+      const cur = win.getBounds();
+      const wa = screen.getDisplayMatching({ x: cur.x, y: cur.y, width: p[0], height: p[1] }).workArea;
+      const w = Math.min(p[0], wa.width - 10), h = Math.min(p[1], wa.height - 10);
+      const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
+      const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
+      win.setBounds({ x, y, width: w, height: h });
       break;
     }
     case 'close': win.close(); break;

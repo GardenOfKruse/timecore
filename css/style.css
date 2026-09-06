@@ -402,3 +402,74 @@ body[data-phase="WARMUP"] #app .panel { border-color: rgba(255, 179, 71, 0.3); }
 body[data-phase="SURGE"] #app .panel { border-color: rgba(255, 140, 59, 0.38); }
 body[data-phase="PULSE"] #app .panel { border-color: rgba(255, 77, 94, 0.45); box-shadow: 0 10px 34px rgba(255, 40, 70, 0.12); }
 body[data-phase="ZERO"] #app .panel { border-color: rgba(255, 255, 255, 0.55); }
+
+/* ---------- 首次启动欢迎卡 ---------- */
+#welcome {
+  position: fixed; inset: 0; z-index: 85; display: flex; align-items: center; justify-content: center;
+  background: rgba(3, 6, 12, 0.45); pointer-events: auto;   /* #app 是 none，必须显式接住点击 */
+  overflow: auto;
+}
+#welcome[hidden] { display: none; }
+.wl-card { padding: 30px 42px 24px; text-align: center; max-width: min(440px, calc(100vw - 30px)); max-height: calc(100vh - 30px); overflow: auto; margin: auto; }
+.wl-logo { font-size: 40px; line-height: 1; color: var(--accent); text-shadow: 0 0 30px rgba(57, 215, 255, 0.8); animation: breathe 2.6s ease-in-out infinite; }
+.wl-card h2 { margin: 12px 0 8px; font-size: 18px; letter-spacing: 0.14em; color: #eaf6ff; }
+.wl-card p { margin: 0 0 18px; font-size: 13px; line-height: 1.9; }
+.wl-btns { display: flex; flex-direction: column; gap: 9px; }
+.wl-btns button {
+  padding: 9px 16px; border-radius: 10px; font-size: 14px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid var(--stroke); color: var(--txt);
+}
+.wl-btns button:hover { background: rgba(120, 200, 255, 0.14); }
+.wl-btns button.primary { background: rgba(57, 215, 255, 0.2); border-color: rgba(57, 215, 255, 0.5); color: #d9f6ff; }
+.wl-btns button.ghost { opacity: 0.6; }
+.wl-note { margin-top: 16px; }
+body.compact .wl-card { padding: 18px 22px 14px; }
+body.compact .wl-card h2 { font-size: 15px; }
+body.compact .wl-card p { font-size: 12px; margin-bottom: 12px; }
+body.compact .wl-btns button { padding: 7px 12px; font-size: 13px; }
+body.compact .wl-logo { font-size: 28px; }
+body.mini .wl-card p, body.mini .wl-note { display: none; }   /* 迷你窗口只留关键动作 */
+
+/* ---------- 标题栏状态灯（校时 · ADB · 音频） ---------- */
+.tb-lights { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
+.tb-lights i { width: 7px; height: 7px; border-radius: 50%; background: #555; box-shadow: 0 0 6px rgba(0, 0, 0, 0.4); }
+.tb-lights i[data-s="ok"] { background: #4dffa6; box-shadow: 0 0 7px #4dffa6; }
+.tb-lights i[data-s="busy"] { background: #8ab6ff; box-shadow: 0 0 7px #8ab6ff; animation: breathe 1.2s ease-in-out infinite; }
+.tb-lights i[data-s="warn"] { background: var(--warm); box-shadow: 0 0 7px var(--warm); }
+.tb-lights i[data-s="off"] { background: #555; }
+
+/* ---------- 开始/停止按钮状态化 ---------- */
+.cd-ctrl button:disabled, .chip-btn:disabled { opacity: 0.35; cursor: default; }
+.cd-ctrl button:disabled:hover { background: rgba(255, 255, 255, 0.06); }
+#cd-start.running { box-shadow: 0 0 14px rgba(57, 215, 255, 0.35); }
+
+/* ---------- ADB 引导卡 + 未启用门槛 ---------- */
+#adb-guide {
+  border: 1px solid rgba(57, 215, 255, 0.25); border-radius: 10px; padding: 9px 11px;
+  margin: 8px 0; background: rgba(57, 215, 255, 0.05);
+}
+.ag-title { font-size: 12px; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 6px; }
+.ag-step { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); margin: 4px 0; }
+.ag-step i {
+  font-style: normal; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--stroke);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: none;
+}
+.ag-step.ok { color: #4dffa6; }
+.ag-step.ok i { border-color: rgba(77, 255, 166, 0.6); background: rgba(77, 255, 166, 0.12); }
+.ag-step button { margin-left: auto; padding: 2px 9px; font-size: 11px; }
+.ag-warn { font-size: 11px; color: var(--warm); margin-top: 6px; }
+.ag-note {
+  font-size: 10px; color: var(--dim); opacity: 0.75; margin-top: 7px;
+  border-top: 1px dashed var(--stroke); padding-top: 6px;
+}
+/* 未启用门槛：面板整体置灰、不可交互，只有总开关和引导卡可用 */
+#adb-drawer[data-on="0"] .adb-gate { opacity: 0.38; pointer-events: none; filter: saturate(0.5); }
+#adb-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ---------- 迷你密度（<500px：时钟 + 倒计时条的最小装置形态） ---------- */
+body.mini #judge-pop .label { font-size: 20px; }
+body.mini #combo { right: 10px; top: 40%; }
+body.mini #combo-num { font-size: 16px; }
+body.mini .ctrl-panel { padding: 4px; gap: 3px; }
+body.mini .ctrl-panel button { width: 22px; height: 22px; font-size: 10px; }
+body.mini #btn-adb { padding: 0 4px; }

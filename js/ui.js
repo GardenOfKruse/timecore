@@ -30,6 +30,8 @@
     else if (s === 'stale') txt = '偏移保持 ' + (off >= 0 ? '+' : '') + off + 'ms';
     else if (s === 'local' && TC.time.noSync) txt = '本地时钟（未联网校时）';
     el.badge.querySelector('b').textContent = txt;
+    const lt = document.getElementById('lt-sync');
+    if (lt) lt.dataset.s = s === 'synced' ? 'ok' : s === 'syncing' ? 'busy' : 'warn';
   }
 
   function fmtTargetMs(t) {
@@ -230,7 +232,10 @@
       } else if (e.code === 'KeyF' && !e.repeat && !isTyping(e.target)) toggleFullscreen();
       else if (e.code === 'KeyC' && !e.repeat && !isTyping(e.target)) toggleCompact();
       else if (e.code === 'KeyM' && !e.repeat && !isTyping(e.target)) { TC.Audio.setMute(!TC.Audio.muted); el.mute.classList.toggle('active', TC.Audio.muted); }
-      else if (e.code === 'Escape') {
+      else if (e.ctrlKey && !e.repeat && (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') && window.electronAPI) {
+        e.preventDefault();
+        window.electronAPI.send('size', { preset: { Digit1: 'mini', Digit2: 'compact', Digit3: 'standard' }[e.code] });
+      } else if (e.code === 'Escape') {
         if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
         el.drawer.classList.remove('open');
       }
@@ -255,13 +260,77 @@
     TC.bus.on('mute', m => el.mute.classList.toggle('active', m));
     TC.bus.on('sync', renderSync);
     TC.bus.on('tz', () => { el.tz.value = TC.Clock.tz; });
+
+    // 倒计时状态事件 → 开始/停止按钮
+    TC.bus.on('cd:start', syncRunState);
+    TC.bus.on('cd:stop', syncRunState);
+    TC.bus.on('cd:done', syncRunState);
+    syncRunState();
+
+    // 标题栏状态灯：校时由 renderSync 驱动；ADB 由 adb 模块外发；音频轮询 AudioContext 状态
+    const setLight = (id, s) => { const n = document.getElementById(id); if (n) n.dataset.s = s; };
+    TC.bus.on('adb:state', st => setLight('lt-adb', !st.enabled ? 'off' : st.ready ? 'ok' : st.ok ? 'busy' : 'warn'));
+    setInterval(() => {
+      const i = TC.Audio.info();
+      setLight('lt-aud', i.muted ? 'warn' : i.state === 'running' ? 'ok' : 'busy');
+    }, 1500);
   }
 
+  /* 尺寸预设：桌面端在 标准→紧凑→迷你 间循环（真实缩放窗口，密度类随宽度自适应）；
+   * 浏览器模式无法缩放系统窗口，退化为旧的 CSS 密度开关 */
+  const SIZE_ORDER = ['standard', 'compact', 'mini'];
+  function currentSize() {
+    return innerWidth < 500 ? 'mini' : innerWidth < 780 ? 'compact' : 'standard';
+  }
   function toggleCompact() {
+    if (window.electronAPI) {
+      window.electronAPI.send('size', { preset: SIZE_ORDER[(SIZE_ORDER.indexOf(currentSize()) + 1) % SIZE_ORDER.length] });
+      return;
+    }
     const on = !document.body.classList.contains('compact');
     document.body.classList.toggle('compact', on);
     localStorage.setItem('tc.compact', on ? '1' : '0');
     el.compact.classList.toggle('active', on);
+  }
+
+  // 密度随实际宽度自适应：手动拖拽边缘也会自动切换布局档位
+  let densTimer = 0;
+  function applyDensity() {
+    const w = innerWidth;
+    document.body.classList.toggle('mini', w < 500);
+    document.body.classList.toggle('compact', w < 780);
+    el.compact.classList.toggle('active', w < 780);
+  }
+  window.addEventListener('resize', () => { clearTimeout(densTimer); densTimer = setTimeout(applyDensity, 120); });
+
+  // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用
+  function syncRunState() {
+    const armed = TC.Countdown.info().armed;
+    el.start.textContent = armed ? '重新布防' : '开始';
+    el.start.title = armed ? '运行中：按当前参数重新对齐布防' : '按分/秒周期对齐布防';
+    el.start.classList.toggle('running', armed);
+    el.stop.disabled = !armed;
+  }
+
+  // 首次启动欢迎卡：开启节拍器按钮同时完成音频解锁手势（AudioContext 需用户手势才允许出声）
+  function showWelcome() {
+    const w = document.getElementById('welcome');
+    if (!w) return;
+    w.hidden = false;
+    const finish = withBeat => {
+      w.hidden = true;
+      localStorage.setItem('tc.welcomed', '1');
+      if (withBeat) { TC.Audio.unlock(); TC.Beats.toggleFreerun(true); }
+      else localStorage.setItem('tc.freerun', '0');   // 静默进入：之后开机也不自启节拍器
+    };
+    document.getElementById('wl-beat').addEventListener('click', () => finish(true));
+    document.getElementById('wl-skip').addEventListener('click', () => finish(false));
+    document.getElementById('wl-adb').addEventListener('click', () => {
+      finish(false);
+      document.getElementById('drawer').classList.remove('open');
+      document.getElementById('adb-drawer').classList.add('open');
+      toast('打开「启用 ADB 齐射」开关，按引导完成配置');
+    });
   }
 
   let fsNow = false;   // 显式同步的全屏状态（Electron 下由主进程回传）
@@ -300,10 +369,12 @@
       el.vignette = document.getElementById('vignette');
       bindControls();
 
-      if (localStorage.getItem('tc.compact') === '1') {
+      if (window.electronAPI) applyDensity();   // 桌面端密度随窗口宽度自动适配（含记忆/预设尺寸）
+      else if (localStorage.getItem('tc.compact') === '1') {
         document.body.classList.add('compact');
         el.compact.classList.add('active');
       }
+      if (TC.fresh) showWelcome();
       if (localStorage.getItem('tc.xparent') === '1') {
         document.body.classList.add('xparent');
         el.xparent.checked = true;

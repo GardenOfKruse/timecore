@@ -5,7 +5,8 @@
   const hasElectron = !!window.electronAPI;
   const PRESPAWN_MS = 1800;
 
-  const DEF = { path: '', leadMs: 300, cal: true, precise: true, dry: false, enabled: true, seeded: false, devices: {}, actions: [] };
+  // enabled 默认关：首次使用先引导配置（老用户的已存值以 localStorage 为准，不受影响）
+  const DEF = { path: '', leadMs: 300, cal: true, precise: true, dry: false, enabled: false, seeded: false, devices: {}, actions: [] };
   let cfg = load();
   let adbPath = cfg.path || '';
   let adbOk = false, adbVer = '';
@@ -113,6 +114,7 @@
     const changed = sig !== lastSig;
     if (changed) { lastSig = sig; renderDevices(); renderChipsAll(); }
     save();
+    syncGuide();   // 引导卡与状态灯跟随设备数/就绪态变化（无变化时也是廉价刷新）
     if (!silent || changed) log('扫描完成：' + seen.size + ' 台设备');   // 自动刷新时无变化不打日志
   }
   function devsSig() {
@@ -175,6 +177,40 @@
 
   /* ---------- 齐射调度 ---------- */
   function enabledActions() { return cfg.actions.filter(a => a.on); }
+  function readyDevices() { return [...devs.values()].filter(d => d.state === 'device'); }
+
+  // 就绪状态外发（标题栏状态灯）
+  function emitState() {
+    TC.bus.emit('adb:state', { enabled: cfg.enabled, ok: adbOk, ready: readyDevices().length, count: devs.size });
+  }
+
+  /* 空状态引导卡：四步就绪链（未启用 → 没装 adb → 没设备 → 无启用动作），全部完成即隐藏 */
+  function renderGuide() {
+    const g = $('adb-guide');
+    if (!g) return;
+    const rd = readyDevices();
+    const unauth = [...devs.values()].some(d => d.state === 'unauthorized');
+    const acts = enabledActions().length;
+    const done = cfg.enabled && adbOk && rd.length > 0 && acts > 0;
+    g.hidden = done;
+    const step = (n, ok, txt, btn) =>
+      '<div class="ag-step' + (ok ? ' ok' : '') + '"><i>' + (ok ? '✓' : n) + '</i><span>' + txt + '</span>' + (btn || '') + '</div>';
+    g.innerHTML =
+      '<div class="ag-title">' + (done ? '✓ ADB 齐射已就绪' : '按步骤开启 ADB 齐射') + '</div>' +
+      step(1, cfg.enabled, '开启「启用 ADB 齐射」总开关') +
+      step(2, adbOk, adbOk ? 'adb 组件已就绪' : '安装 adb（一键下载官方组件，约 6MB）', adbOk ? '' : '<button id="ag-dl">下载</button>') +
+      step(3, rd.length > 0, rd.length ? '已连接 ' + rd.length + ' 台设备' : 'USB 连接手机并开启 USB 调试', rd.length ? '' : '<button id="ag-scan">扫描</button>') +
+      step(4, acts > 0, acts ? '已启用 ' + acts + ' 个动作' : '添加动作并勾选「启用」') +
+      (unauth ? '<div class="ag-warn">检测到未授权设备：请在手机上允许「USB 调试」弹窗，再点扫描</div>' : '') +
+      '<div class="ag-note">不需要 ADB？保持总开关关闭即可，TIMECORE 仍是完整的纯时间装置</div>';
+    const dl = $('ag-dl');
+    if (dl) dl.addEventListener('click', downloadAdb);
+    const sc = $('ag-scan');
+    if (sc) sc.addEventListener('click', () => (adbOk ? scan() : detect()));
+    const dot = $('adb-dot');
+    if (dot) dot.style.background = !cfg.enabled ? '#777' : rd.length ? '#4dffa6' : adbOk ? '#39d7ff' : '#ffb347';
+  }
+  function syncGuide() { renderGuide(); emitState(); }
   function targetsOf(a) {
     const en = [...devs.values()].filter(d => d.on && d.state === 'device');
     return (a.devs && a.devs.length) ? en.filter(d => a.devs.includes(d.serial)) : en;
@@ -381,9 +417,8 @@
     if (!s) return;
     s.textContent = adbOk ? '✓ adb ' + (adbVer || '') + ' · ' + adbPath : '✗ 未找到 adb —— 安装 platform-tools 或手动填写路径后点「检测」';
     s.style.color = adbOk ? '#4dffa6' : 'var(--warm)';
-    const dot = $('adb-dot');
-    if (dot) dot.style.background = adbOk ? '#4dffa6' : '#777';
     refreshArmedBtn();
+    syncGuide();
   }
 
   function devRow(d) {
@@ -433,6 +468,7 @@
     if (!devs.size && !Object.keys(cfg.devices).length) {
       box.innerHTML = '<div class="dim small" style="padding:4px 2px">尚未发现设备 —— 手机开启 USB 调试并连接后自动出现</div>';
     }
+    syncGuide();
   }
 
   function chipsHTML(a) {
@@ -546,6 +582,7 @@
     if (!box) return;
     box.innerHTML = '';
     for (const a of cfg.actions) box.appendChild(actionCard(a));
+    syncGuide();
   }
 
   function renderLog() {
@@ -579,7 +616,10 @@
   function renderEnabledState() {
     const cb = $('adb-enabled');
     if (cb) cb.checked = cfg.enabled;
+    const dr = $('adb-drawer');
+    if (dr) dr.dataset.on = cfg.enabled ? '1' : '0';   // 未启用时抽屉整体置灰（引导卡除外）
     refreshArmedBtn();
+    syncGuide();
   }
 
   function newAction(type) {
