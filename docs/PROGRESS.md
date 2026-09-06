@@ -31,6 +31,14 @@
 - 循环 #13：✅ 已完成（2026-09-06）——6 条反馈落地：①扫描全量检测流水线（命名→分辨率→延迟，延迟 60s 新鲜度阈值）+ 时序链公式写进抽屉（点击时刻 = 节点−提前量−传输延迟）②删除按钮改垃圾桶 SVG（悬停变红）③缩略图等比限高 108×170 object-fit:contain + 控件顶对齐（布局不再被撑破）④软节拍起始秒可设（3~60s，默认 10）⑤节拍器开机自启（持久化，默认开）⑥受信鼠标移动现可触发放大镜（此前布局错位致命中失败）。E2E 全绿。5/9/12 提案待用户选择
 - 循环 #14：✅ 已完成（2026-09-06）——ADB 配置即时生效：任何配置变更（启停/提前量/坐标/次数/间隔/设备勾选/精准模式等）经 save() 统一钩子触发去抖 300ms 重排布防，取消未发射定时器并按最新配置重排；已过节点跳过不补发；执行中脚本进程不动；扫描发现设备变化同样触发重排。E2E：启用 2 路 → 停用 0 路 → 再启用 2 路 ✓。图标生成脚本完成（build/icon.ico）。开源发布规划按用户要求延后
 - 循环 #15：✅ 已完成（2026-09-06）——用户全权委托推荐方案：①中心 3D 换**程序化星球**（值噪声大陆/深海/极地纹理 + 独立云层 + BackSide 大气辉光 shader + 节拍弹跳，玻璃环体与旧内核移除，金属轨道变为卫星轨道）②**adb 一键下载**（无 adb 环境从 dl.google.com 拉取 platform-tools 自动解压到 userData，检测候选含该路径）③状态色系统（面板边框随倒计时阶段变色）④到点反馈三档（低/中/高：闪光/冲击波/粒子/震屏强度分档）⑤分轨音量（提示/到点/击拍三条独立推子，tc.track 持久化）⑥README 开源化（下载安装/ADB 准备/发布流程/License）+ .gitignore dist。全量回归全绿（全屏还原/等比/选点/持久化/重排）+ 星球视觉截图 docs/planet.png
+- 循环 #16：✅ 已完成（2026-09-06）——**开源发布上线**：time-core 独立 git 仓库（main 分支）→ API 建仓 GardenOfKruse/timecore（本地 GCM 凭证，token 零回显）→ 推送代码 → tag v1.0.0 → GitHub Actions 自动构建成功 → Release v1.0.0 已发布（TIMECORE-Setup-1.0.0.exe 78MB + Portable 78MB + latest.yml/blockmap）。发布流水线后续发版只需：改 version → tag → push。
+- 循环 #17：✅ 已完成（2026-09-06）——①贡献者身份修正：提交原用全局 git 配置（Gitee 身份 CN-Yi），改为仓库级 GardenOfKruse + GitHub noreply 邮箱（128662648+GardenOfKruse@users.noreply.github.com），orphan 重写单提交历史强推，GitHub 已正确归属 ②打包产物收敛为单个 Windows 安装包（移除 Portable target）③electron-builder 默认创建草稿 Release → PATCH draft:false 正式发布（Release Notes 已写）。E2E：构建 success ✓ 提交归属 GardenOfKruse ✓ Release latest draft:false ✓ 仅 Setup 产物 ✓
+
+## 循环 #17
+
+用户确认贡献者信息有误（Gitee 身份）+ 产物只要一个安装包。标准开源收尾：仓库级 git 身份（noreply 邮箱保证 GitHub 归属正确，与隐私设置兼容）、orphan 分支重写单提交历史、强推 main、删除旧草稿 Release 与 tag 重打。经验：electron-builder 每次 tag 都会新建 DRAFT release，需 PATCH draft:false 才对外可见（后续发版记得这步，或 UI 上点 Publish）。
+
+- 循环 #15：✅ 已完成（2026-09-06）——用户全权委托推荐方案：①中心 3D 换**程序化星球**（值噪声大陆/深海/极地纹理 + 独立云层 + BackSide 大气辉光 shader + 节拍弹跳，玻璃环体与旧内核移除，金属轨道变为卫星轨道）②**adb 一键下载**（无 adb 环境从 dl.google.com 拉取 platform-tools 自动解压到 userData，检测候选含该路径）③状态色系统（面板边框随倒计时阶段变色）④到点反馈三档（低/中/高：闪光/冲击波/粒子/震屏强度分档）⑤分轨音量（提示/到点/击拍三条独立推子，tc.track 持久化）⑥README 开源化（下载安装/ADB 准备/发布流程/License）+ .gitignore dist。全量回归全绿（全屏还原/等比/选点/持久化/重排）+ 星球视觉截图 docs/planet.png
 - 循环 #16：✅ 已完成（2026-09-06）——**开源发布上线**：time-core 独立 git 仓库（main 分支）→ API 建仓 GardenOfKruse/timecore（本地 GCM 凭证，token 零回显）→ 推送代码 → tag v1.0.0 → GitHub Actions 自动构建成功 → **Release v1.0.0 已发布**（TIMECORE-Setup-1.0.0.exe 78MB + Portable 78MB + latest.yml/blockmap）。发布流水线后续发版只需：改 version → tag → push。
 
 ## 循环 #16
