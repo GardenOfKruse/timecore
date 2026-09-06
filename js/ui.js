@@ -19,6 +19,16 @@
     return t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
   }
 
+  // 简易 semver 比较：>0 表示 a 更新
+  function cmpVer(a, b) {
+    const pa = String(a).split('.'), pb = String(b).split('.');
+    for (let i = 0; i < 3; i++) {
+      const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+
   /* ---------- 渲染函数（主循环/事件调用） ---------- */
   function renderSync() {
     const s = TC.time.status, off = TC.time.offset;
@@ -211,6 +221,11 @@
       window.electronAPI.get().then(st => {
         syncFullscreenBtn(st.fs);
         TC.$('tb-top').classList.toggle('active', st.top);
+        // 版本号：标题栏角标 + 关于浮层 + 设置抽屉同一来源（app.getVersion）
+        const v = st.ver ? 'v' + st.ver : '';
+        el.tbVer.textContent = v;
+        el.aboutVer.textContent = v;
+        el.drawerVer.textContent = v;
       }).catch(() => {});
       TC.$('tb-close').addEventListener('click', () => window.electronAPI.send('close'));
       TC.$('tb-top').addEventListener('click', async function () {
@@ -218,6 +233,38 @@
         const st = await window.electronAPI.get();
         this.classList.toggle('active', st.top);
       });
+
+      // 关于浮层：点标题栏 TIMECORE 展开；点击外部 / Esc 收起
+      TC.$('tb-title').addEventListener('click', () => { el.aboutPop.hidden = !el.aboutPop.hidden; });
+      document.addEventListener('pointerdown', e => {
+        if (!el.aboutPop.hidden && !el.aboutPop.contains(e.target) && !TC.$('tb-title').contains(e.target)) el.aboutPop.hidden = true;
+      });
+      el.aboutGh.addEventListener('click', () => window.electronAPI.send('open', 'https://github.com/GardenOfKruse/timecore/releases'));
+      el.aboutCheck.addEventListener('click', async function () {
+        this.disabled = true;
+        const old = this.textContent;
+        this.textContent = '检查中…';
+        try {
+          const r = await fetch('https://api.github.com/repos/GardenOfKruse/timecore/releases/latest', { headers: { 'Accept': 'application/vnd.github+json' } });
+          const j = await r.json();
+          const latest = String(j.tag_name || '').replace(/^v/, '');
+          const cur = String(el.aboutVer.textContent || '').replace(/^v/, '');
+          if (latest && cmpVer(latest, cur) > 0) {
+            toast('⬆ 发现新版本 v' + latest + ' —— 正在打开 Releases 页面');
+            window.electronAPI.send('open', j.html_url);
+          } else if (latest) {
+            toast('✓ 已是最新版本 v' + cur);
+          } else {
+            toast('检查更新失败：未获取到版本信息');
+          }
+        } catch (_) {
+          toast('检查更新失败：网络不可达');
+        }
+        this.disabled = false;
+        this.textContent = old;
+      });
+    } else {
+      el.drawerVer.textContent = 'web';
     }
 
     // 击拍输入：空格 / 画布左键
@@ -238,6 +285,7 @@
       } else if (e.code === 'Escape') {
         if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
         el.drawer.classList.remove('open');
+        if (el.aboutPop) el.aboutPop.hidden = true;
       }
     });
     window.addEventListener('pointerdown', e => {
@@ -363,7 +411,9 @@
         drawer: 'drawer', hue: 'set-hue', vol: 'set-vol', tick: 'set-tick', softlead: 'set-softlead',
         resync: 'btn-resync', simfail: 'btn-simfail', opacityInput: 'set-opacity', xparent: 'set-xparent',
         toast: 'toast', flash: 'flash', mute: 'btn-mute', freerun: 'btn-freerun', compact: 'btn-compact',
-        fullscreen: 'btn-fullscreen', settings: 'btn-settings'
+        fullscreen: 'btn-fullscreen', settings: 'btn-settings',
+        tbVer: 'tb-ver', aboutVer: 'about-ver', drawerVer: 'drawer-ver',
+        aboutPop: 'about-pop', aboutCheck: 'about-check', aboutGh: 'about-gh'
       };
       for (const key of Object.keys(ids)) el[key] = TC.$(ids[key]);
       el.vignette = document.getElementById('vignette');

@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=127">
+<link rel="stylesheet" href="css/style.css?v=128">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -97,7 +97,7 @@
     <label class="row btns"><span>窗口透明度</span><input id="set-opacity" type="range" min="30" max="100" step="5" value="100" hidden></label>
     <label class="ck"><input id="set-xparent" type="checkbox"> 透明背景（桌面端生效）</label>
     <div class="keys dim small">空格 / 左键 击拍 · B 节拍器 · C 窗口尺寸 · F 全屏 · Ctrl+1/2/3 迷你/紧凑/标准 · M 静音 · Esc 关闭</div>
-    <div class="about dim small">TIMECORE v1.1 · 绝对时间节点驱动 · 网络校时 + 平滑回退</div>
+    <div class="about dim small">TIMECORE <span id="drawer-ver" class="digits"></span> · 绝对时间节点驱动 · 网络校时 + 平滑回退</div>
   </aside>
 
   <!-- ADB 齐射抽屉（桌面端） -->
@@ -170,7 +170,7 @@
 
   <!-- Electron 标题栏：窗口控制统一在此 -->
   <header id="titlebar" hidden>
-    <span class="tb-title">TIMECORE</span>
+    <span class="tb-title" id="tb-title" title="关于 TIMECORE · 检查更新">TIMECORE<span id="tb-ver" class="tb-ver"></span></span>
     <span class="tb-btns">
       <span class="tb-lights" title="状态：校时 · ADB · 音频">
         <i id="lt-sync"></i><i id="lt-adb"></i><i id="lt-aud"></i>
@@ -181,20 +181,31 @@
       <button id="tb-close" title="关闭">✕</button>
     </span>
   </header>
+
+  <!-- 关于浮层（点击标题栏 TIMECORE 展开） -->
+  <div id="about-pop" class="panel" hidden>
+    <div class="ab-name">TIMECORE <span id="about-ver" class="digits"></span></div>
+    <div class="ab-sub dim small">悬浮时间核心 · 绝对节点驱动 · 网络校时 + 平滑回退</div>
+    <div class="ab-btns">
+      <button id="about-check">检查更新</button>
+      <button id="about-gh">GitHub Releases</button>
+    </div>
+    <div class="ab-note dim small">ADB 齐射为可选功能 · 配置改动即时生效</div>
+  </div>
 </div>
 
 <noscript>TIMECORE 需要 JavaScript。</noscript>
 <script src="vendor/three.min.js"></script>
-<script src="js/core.js?v=127"></script>
-<script src="js/time-sync.js?v=127"></script>
-<script src="js/clock.js?v=127"></script>
-<script src="js/countdown.js?v=127"></script>
-<script src="js/beats.js?v=127"></script>
-<script src="js/audio.js?v=127"></script>
-<script src="js/scene3d.js?v=127"></script>
-<script src="js/ui.js?v=127"></script>
-<script src="js/adb.js?v=127"></script>
-<script src="js/main.js?v=127"></script>
-<script src="js/test.js?v=127"></script>
+<script src="js/core.js?v=128"></script>
+<script src="js/time-sync.js?v=128"></script>
+<script src="js/clock.js?v=128"></script>
+<script src="js/countdown.js?v=128"></script>
+<script src="js/beats.js?v=128"></script>
+<script src="js/audio.js?v=128"></script>
+<script src="js/scene3d.js?v=128"></script>
+<script src="js/ui.js?v=128"></script>
+<script src="js/adb.js?v=128"></script>
+<script src="js/main.js?v=128"></script>
+<script src="js/test.js?v=128"></script>
 </body>
 </html>

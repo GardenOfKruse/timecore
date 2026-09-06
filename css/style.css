@@ -236,7 +236,27 @@ body.electron #btn-adb { display: inline-block; }
   background: rgba(8, 13, 24, 0.55); backdrop-filter: blur(10px);
   -webkit-app-region: drag; pointer-events: auto;
 }
-.tb-title { font-size: 11px; letter-spacing: 0.3em; color: var(--dim); padding-left: 6px; }
+.tb-title {
+  font-size: 11px; letter-spacing: 0.3em; color: var(--dim); padding-left: 6px;
+  cursor: pointer; -webkit-app-region: no-drag;   /* 可点击：展开关于浮层 */
+  transition: color 0.2s;
+}
+.tb-title:hover { color: var(--accent); }
+.tb-ver { font-size: 10px; letter-spacing: 0.08em; margin-left: 7px; opacity: 0.85; }
+
+/* ---------- 关于浮层 ---------- */
+#about-pop { position: absolute; top: 36px; left: 10px; width: 252px; padding: 12px 14px; z-index: 90; }
+.ab-name { font-size: 14px; letter-spacing: 0.12em; color: var(--accent); }
+#about-ver { font-size: 11px; color: #eaf6ff; margin-left: 4px; }
+.ab-sub { margin: 4px 0 10px; line-height: 1.6; }
+.ab-btns { display: flex; gap: 7px; margin-bottom: 9px; }
+.ab-btns button {
+  flex: 1; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--stroke); color: var(--txt);
+  border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer;
+}
+.ab-btns button:hover { background: rgba(120, 200, 255, 0.15); }
+.ab-btns button:disabled { opacity: 0.5; cursor: default; }
+.ab-note { border-top: 1px dashed var(--stroke); padding-top: 7px; }
 .tb-btns { display: flex; gap: 4px; -webkit-app-region: no-drag; }
 #titlebar[hidden] { display: none; }
 body.electron #titlebar { display: flex; }

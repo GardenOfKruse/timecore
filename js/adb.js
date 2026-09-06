@@ -56,7 +56,9 @@
   /* ---------- 基础操作 ---------- */
   async function detect(explicit) {
     if (!hasElectron) return { ok: false };
-    const r = await ipc('detect', { path: explicit != null ? explicit : (cfg.path || '') }).catch(e => ({ ok: false, error: String(e) }));
+    // 自动检测（explicit 未传）永远不带钉死路径：cfg.path 是上次检测的"结果"而非用户指定，
+    // 钉死它会让 PATH 升级后仍短路在旧解析上；只有用户在路径框里显式检测才算指定
+    const r = await ipc('detect', { path: explicit != null ? explicit : '' }).catch(e => ({ ok: false, error: String(e) }));
     adbOk = !!r.ok;
     if (r.ok) { adbPath = r.path; adbVer = r.version || ''; cfg.path = r.path; calcAncient(); save(); }
     renderStatus();

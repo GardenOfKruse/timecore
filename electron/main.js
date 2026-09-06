@@ -1,5 +1,5 @@
 /* Electron 主进程：透明无边框窗口 + 始终置顶 + 全屏 + 透明度 + ADB 齐射 */
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const pathM = require('path');
@@ -104,11 +104,17 @@ ipcMain.on('win', (ev, cmd, arg) => {
       win.setBounds({ x, y, width: w, height: h });
       break;
     }
+    case 'open': {
+      // 仅允许打开本项目的 GitHub 页面（更新/Releases 跳转）
+      const url = String(arg || '');
+      if (/^https:\/\/github\.com\/GardenOfKruse\/timecore/.test(url)) shell.openExternal(url);
+      break;
+    }
     case 'close': win.close(); break;
   }
 });
 
-ipcMain.handle('win:get', () => win ? { top: win.isAlwaysOnTop(), fs: fsState } : { top: false, fs: false });
+ipcMain.handle('win:get', () => ({ top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion() }));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */
 const ADB_CMDS = new Set(['detect', 'exec']);
