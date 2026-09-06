@@ -10,6 +10,12 @@
   let cfg = load();
   let adbPath = cfg.path || '';
   let adbOk = false, adbVer = '';
+  let adbAncient = false;   // 1.0.3x 及更早：USB 可用，但 Android 11+ 无线调试（TLS）无法握手
+
+  function calcAncient() {
+    const m = (adbVer || '').match(/^(\d+)\.(\d+)\.(\d+)$/);
+    adbAncient = !!m && +m[1] === 1 && +m[2] === 0 && +m[3] < 41;
+  }
   const devs = new Map();           // serial -> {serial,name,state,model,L,W,H,on}
   let timers = [];
   const logs = [];
@@ -52,10 +58,10 @@
     if (!hasElectron) return { ok: false };
     const r = await ipc('detect', { path: explicit != null ? explicit : (cfg.path || '') }).catch(e => ({ ok: false, error: String(e) }));
     adbOk = !!r.ok;
-    if (r.ok) { adbPath = r.path; adbVer = r.version || ''; cfg.path = r.path; save(); }
+    if (r.ok) { adbPath = r.path; adbVer = r.version || ''; cfg.path = r.path; calcAncient(); save(); }
     renderStatus();
     const dl = $('adb-download');
-    if (dl) dl.hidden = adbOk;
+    if (dl) { dl.hidden = adbOk && !adbAncient; dl.textContent = adbAncient ? '⬇ 升级 adb' : '⬇ 下载 adb'; }
     return r;
   }
 
@@ -65,6 +71,8 @@
     const r = await ipc('download', {}).catch(e => ({ ok: false, error: String(e) }));
     if (r && r.ok) {
       log('adb 下载完成，已自动放置');
+      cfg.path = '';   // 升级语义：清掉钉死的旧路径（如 PATH 上的 1.0.3x），让检测按候选顺序采用自家新版
+      save();
       await detect();
       await scan();
     } else {
@@ -146,9 +154,18 @@
   }
 
   async function connect(ip) {
+    if (adbAncient && /^\d+(\.\d+){3}:\d+$/.test(ip)) log('⚠ adb ' + adbVer + ' 不支持 Android 11+ 无线调试（TLS 握手）——先点「⬇ 升级 adb」再连接');
     const r = await ipc('exec', { path: adbPath, args: ['connect', ip], timeoutMs: 8000 });
     log('connect ' + ip + ' → ' + ((r.stdout || r.stderr || r.error || '').trim().slice(0, 60)));
-    scan();
+    await scan();
+    const d = devs.get(ip);
+    if (d && d.state === 'offline') {
+      log(adbAncient
+        ? '⚠ ' + ip + ' 一直离线：旧版 adb 无法完成无线调试握手——「⬇ 升级 adb」装官方最新组件后重连即可'
+        : '⚠ ' + ip + ' 离线：请确认手机「无线调试」仍开启，必要时重新配对后重连');
+    } else if (d && d.state === 'device') {
+      log('✓ ' + ip + ' 已就绪（' + (d.name || '设备') + '）');
+    }
   }
 
   /* ---------- 脚本生成 ---------- */
@@ -427,8 +444,13 @@
   function renderStatus() {
     const s = $('adb-status');
     if (!s) return;
-    s.textContent = adbOk ? '✓ adb ' + (adbVer || '') + ' · ' + adbPath : '✗ 未找到 adb —— 安装 platform-tools 或手动填写路径后点「检测」';
-    s.style.color = adbOk ? '#4dffa6' : 'var(--warm)';
+    if (adbOk && adbAncient) {
+      s.textContent = '⚠ adb ' + (adbVer || '') + '（版本过旧）——USB 可用，但 Android 11+ 无线调试无法握手。点「⬇ 升级 adb」安装官方最新组件';
+      s.style.color = 'var(--warm)';
+    } else {
+      s.textContent = adbOk ? '✓ adb ' + (adbVer || '') + ' · ' + adbPath : '✗ 未找到 adb —— 安装 platform-tools 或手动填写路径后点「检测」';
+      s.style.color = adbOk ? '#4dffa6' : 'var(--warm)';
+    }
     refreshArmedBtn();
     syncGuide();
   }
@@ -703,7 +725,7 @@
 
   /* ---------- 调试接口 ---------- */
   TC.ADB = {
-    debug() { return { adbOk, adbPath, adbVer, enabled: cfg.enabled, armed, plannedN, spawnedN: spawnedKeys.size, pending: timers.length, cfg, devices: [...devs.values()], logs: logs.slice(0, 12) }; },
+    debug() { return { adbOk, adbPath, adbVer, adbAncient, enabled: cfg.enabled, armed, plannedN, spawnedN: spawnedKeys.size, pending: timers.length, cfg, devices: [...devs.values()], logs: logs.slice(0, 12) }; },
     // 测试钩子：注入模拟在线设备（配合演练模式做确定性回归；test 标记使其免疫扫描清理，永不参与真实发射）
     _dev(serial) {
       const d = { serial, name: '模拟机', state: 'device', model: 'TEST', L: 100, W: 1080, H: 2340, on: true, probedAt: TC.time.epoch(), test: true };

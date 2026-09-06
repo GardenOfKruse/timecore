@@ -175,31 +175,46 @@ ipcMain.handle('adb:download', async () => {
   }
 });
 
+/* 现代 platform-tools 统一报 version 1.0.41（附 Version 34+ 构建号）；
+ * 1.0.3x 及更早是十多年前的旧版，USB 可用但无 Android 11+ 无线调试（TLS）能力 */
+const ADB_MODERN = /version 1\.0\.41/;
+
 ipcMain.handle('adb:detect', async (e, payload) => {
   const given = payload && payload.path;
+  // 候选顺序：用户指定 → 自家 platform-tools → PATH → SDK → 常见目录。
+  // 自家优先于 PATH：PATH 上常驻旧版 adb（1.0.3x），会让无线调试"连上即离线"
   const cands = [];
   if (given) cands.push(given);
-  cands.push('adb');
   cands.push(pathM.join(app.getPath('userData'), 'platform-tools', 'adb.exe'));
+  cands.push('adb');
   if (process.env.LOCALAPPDATA) cands.push(pathM.join(process.env.LOCALAPPDATA, 'Android', 'Sdk', 'platform-tools', 'adb.exe'));
   cands.push('C:\\platform-tools\\adb.exe');
+  const seen = new Set();
+  let fallback = null;
   for (const c of cands) {
+    if (!c || seen.has(c)) continue;
+    seen.add(c);
     const r = await runProcess(c, ['version'], 4000);
     if (r.ok && /Android Debug Bridge/.test(r.stdout)) {
-      return { ok: true, path: c, version: (r.stdout.match(/version ([\d.]+)/) || [])[1] || '' };
+      const version = (r.stdout.match(/version ([\d.]+)/) || [])[1] || '';
+      if (given && c === given) return { ok: true, path: c, version };   // 用户指定路径即采纳
+      if (ADB_MODERN.test(r.stdout)) return { ok: true, path: c, version };   // 现代版直接采纳
+      if (!fallback) fallback = { ok: true, path: c, version };   // 旧版仅兜底，继续找更好的
     }
   }
   const w = await runProcess('where', ['adb'], 4000);
   if (w.ok) {
     const first = w.stdout.split(/\r?\n/).map(s => s.trim()).find(Boolean);
-    if (first) {
+    if (first && !seen.has(first)) {
       const r = await runProcess(first, ['version'], 4000);
       if (r.ok && /Android Debug Bridge/.test(r.stdout)) {
-        return { ok: true, path: first, version: (r.stdout.match(/version ([\d.]+)/) || [])[1] || '' };
+        const version = (r.stdout.match(/version ([\d.]+)/) || [])[1] || '';
+        if (ADB_MODERN.test(r.stdout)) return { ok: true, path: first, version };
+        if (!fallback) fallback = { ok: true, path: first, version };
       }
     }
   }
-  return { ok: false };
+  return fallback || { ok: false };
 });
 
 app.whenReady().then(createWindow);
