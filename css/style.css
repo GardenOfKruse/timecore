@@ -354,10 +354,17 @@ body.electron .clock-panel, body.electron .ctrl-panel { top: 40px; }
   border: 1px solid var(--stroke); border-radius: 9px; font-size: 12px;
 }
 .adb-dev .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.adb-dev .d-name { width: 82px; }
+.adb-dev .d-type {
+  font-size: 9px; padding: 1px 5px; border-radius: 999px; flex: none; letter-spacing: 0.05em;
+}
+.d-type.t-USB { color: var(--accent); border: 1px solid rgba(57, 215, 255, 0.4); }
+.d-type.t-IP { color: var(--warm); border: 1px solid rgba(255, 179, 71, 0.45); }
+.adb-dev .d-name { width: 70px; }
 .adb-dev .d-serial { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); font-size: 10px; }
 .adb-dev .d-lat { color: var(--accent); font-size: 11px; flex: none; }
 .adb-dev button { padding: 2px 7px; font-size: 11px; }
+.adb-dev .d-del { padding: 2px 4px; display: inline-flex; align-items: center; }
+.adb-dev .d-del:hover { color: #ff5d7a; border-color: rgba(255, 93, 122, 0.4); }
 .adb-action { border: 1px solid var(--stroke); border-radius: 10px; padding: 8px 9px; margin: 8px 0; }
 .adb-action .row input.a-name { flex: 1; }
 .adb-action textarea.a-script {

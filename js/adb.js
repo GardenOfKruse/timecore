@@ -457,21 +457,28 @@
     syncGuide();
   }
 
+  // 无线调试设备的 serial 形如 ip:端口，USB 设备为纯序列号
+  function devType(serial) { return String(serial).includes(':') ? 'IP' : 'USB'; }
+
   function devRow(d) {
     const row = document.createElement('div');
     row.className = 'adb-dev' + (d.state === 'device' ? '' : ' off');
     const st = d.state === 'device' ? '' : (d.state === 'unauthorized' ? '未授权' : '离线');
+    const del = '<button class="d-del" title="从列表移除（重新连接会再次出现）"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>';
     row.innerHTML =
       '<i class="dot" style="background:' + (d.state === 'device' ? '#4dffa6' : '#ff5d7a') + '"></i>' +
+      '<span class="d-type t-' + devType(d.serial) + '">' + devType(d.serial) + '</span>' +
       '<input class="d-name" value="' + (d.name || '').replace(/"/g, '') + '" title="设备名称">' +
       '<span class="d-serial" title="' + d.serial + '">' + (st || d.serial) + '</span>' +
       '<span class="d-lat" title="传输延迟（echo 往返中位）">' + (d.L != null ? d.L + 'ms' : '—') + '</span>' +
       '<button class="d-cal" title="测量传输延迟">校</button>' +
       '<button class="d-tap" title="点一下屏幕中心（测试）">点</button>' +
+      del +
       '<label class="ck-inline" title="参与齐射"><input type="checkbox" class="d-on"' + (d.on ? ' checked' : '') + '></label>';
     row.querySelector('.d-name').addEventListener('change', e => { d.name = e.target.value.trim() || d.serial; cfg.devices[d.serial].name = d.name; save(); renderChipsAll(); });
     row.querySelector('.d-on').addEventListener('change', e => { d.on = e.target.checked; cfg.devices[d.serial].on = d.on; save(); renderChipsAll(); });
     row.querySelector('.d-cal').addEventListener('click', () => probe(d));
+    row.querySelector('.d-del').addEventListener('click', () => removeDevice(d.serial));
     row.querySelector('.d-tap').addEventListener('click', () => {
       if (cfg.dry) { log('【演练】→ ' + (d.name || d.serial) + '：input tap 屏幕中心'); return; }
       runScript(d, 'input tap ' + Math.floor((d.W || 1080) / 2) + ' ' + Math.floor((d.H || 2340) / 2), '点测');
@@ -485,12 +492,24 @@
     // 灰色行（未连接设备）也用垃圾桶图标
     row.innerHTML =
       '<i class="dot" style="background:#555"></i>' +
+      '<span class="d-type t-' + devType(serial) + '">' + devType(serial) + '</span>' +
       '<input class="d-name" value="' + (sv.name || '').replace(/"/g, '') + '" title="设备名称">' +
       '<span class="d-serial" title="' + serial + '">未连接</span>' +
+      '<button class="d-del" title="从列表移除"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>' +
       '<label class="ck-inline" title="连接后参与齐射"><input type="checkbox" class="d-on"' + (sv.on ? ' checked' : '') + '></label>';
     row.querySelector('.d-name').addEventListener('change', e => { sv.name = e.target.value.trim() || serial; save(); renderChipsAll(); });
     row.querySelector('.d-on').addEventListener('change', e => { sv.on = e.target.checked; save(); });
+    row.querySelector('.d-del').addEventListener('click', () => removeDevice(serial));
     return row;
+  }
+
+  // 从列表移除设备：清记录 + 清动作引用；真机重连会自动重新出现
+  function removeDevice(serial) {
+    delete cfg.devices[serial];
+    devs.delete(serial);
+    for (const a of cfg.actions) a.devs = (a.devs || []).filter(s => s !== serial);
+    save(); renderDevices(); renderChipsAll();
+    log('已移除设备 ' + serial + '（重新连接会再次出现）');
   }
 
   function renderDevices() {
@@ -736,7 +755,7 @@
       renderDevices();
       return d;
     },
-    detect, scan, testFire, arm, pickPoint, openPicker, setEnabled,
+    detect, scan, testFire, arm, pickPoint, openPicker, setEnabled, removeDevice,
     dry(v) { cfg.dry = !!v; save(); }
   };
 })();
