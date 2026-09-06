@@ -68,8 +68,7 @@
   const ready = () => ctx && ctx.state === 'running';
 
   const S = {
-    tick(t) { osc('square', 1900, 1400, t, 0.03, 0.10); },
-    softFree(t) { osc('sine', 1200, 1200, t, 0.025, 0.06); },
+    tick(t) { osc('square', 1900, 1400, t, 0.03, 0.10, 'beat'); },   // 走提示音轨：受「提示音量」滑杆控制
     beep(k, t) {   // 3/2/1 递升
       const f = { 3: 880, 2: 988, 1: 1175 }[k] || 880;
       osc('triangle', f, f, t, 0.10, 0.30, 'beat');
@@ -119,10 +118,12 @@
         else if (k <= 3) S.beep(k, tt);
         else if (k <= softLead && tickOn) S.tick(tt);
       }
-    } else if (TC.Beats.stats().freerun) {
+    } else if (TC.Beats.stats().freerun && tickOn) {
+      // 自由节拍器：与倒计时提示音同款可闻音量（此前是近乎听不见的极轻正弦）；
+      // 倒计时进行中走上面分支不叠加，避免同一秒双音
       const next = Math.ceil((e + 180) / 1000) * 1000;
       const key = 'fr' + next;
-      if (!scheduled.has(key)) { scheduled.add(key); S.softFree(tFor(next)); }
+      if (!scheduled.has(key)) { scheduled.add(key); S.tick(tFor(next)); }
     }
     if (scheduled.size > 4000) scheduled.clear();
   }
