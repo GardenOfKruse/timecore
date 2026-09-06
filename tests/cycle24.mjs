@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const ELECTRON = require('electron');
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PROFILE = path.join(os.tmpdir(), 'tc-c24-profile');
-const PORT = 9232;
+const PORT = 9236;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let seq = 0;
@@ -74,7 +74,7 @@ const ui0 = JSON.parse(await js(`JSON.stringify({
   status: document.getElementById('adb-status').textContent
 })`));
 check('升级按钮可见且文案为升级', ui0.dlHidden === false && ui0.dlText.includes('升级'), { hidden: ui0.dlHidden, text: ui0.dlText });
-check('状态行提示版本过旧', ui0.status.includes('版本过旧'), ui0.status.slice(0, 50));
+check('状态行提示版本过旧', ui0.status.includes('过旧'), ui0.status.slice(0, 50));
 
 // 真实升级链路：下载官方 platform-tools 到隔离 profile → 检测切到新版
 console.log('...下载中（官方 platform-tools ~6MB）...');

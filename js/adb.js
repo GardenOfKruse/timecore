@@ -6,7 +6,7 @@
   const PRESPAWN_MS = 1800;
 
   // enabled 默认关：首次使用先引导配置（老用户的已存值以 localStorage 为准，不受影响）
-  const DEF = { path: '', leadMs: 300, cal: true, precise: true, dry: false, enabled: false, seeded: false, devices: {}, actions: [] };
+  const DEF = { path: '', leadMs: 300, cal: true, precise: true, comp: true, dry: false, enabled: false, seeded: false, devices: {}, actions: [] };
   let cfg = load();
   let adbPath = cfg.path || '';
   let adbOk = false, adbVer = '';
@@ -142,10 +142,23 @@
       t.push(r.durMs);
     }
     d.L = t.length === 3 ? t.sort((a, b) => a - b)[1] : null;
+    // input 命令开销（无参调用走 usage 退出的同一条 app_process 启动路径，不产生点击）
+    // RTT(input) − RTT(echo) ≈ 单次点击的命令执行开销，用于间隔补偿
+    if (d.L != null) {
+      const ti = [];
+      for (let i = 0; i < 3; i++) {
+        const r = await ipc('exec', { path: adbPath, args: ['-s', d.serial, 'shell', 'input'], timeoutMs: 5000 });
+        if (r.durMs != null) ti.push(r.durMs);
+      }
+      if (ti.length === 3) {
+        const med = ti.sort((a, b) => a - b)[1];
+        d.TI = Math.max(0, Math.min(1000, med - d.L));
+      }
+    }
     d.probedAt = TC.time.epoch();
     lastSig = '';   // 强制下一轮刷新行显示
     renderDevices();
-    if (!silent) log((d.name || d.serial) + ' 传输延迟 → ' + (d.L != null ? d.L + 'ms' : '测量失败'));
+    if (!silent) log((d.name || d.serial) + ' 传输延迟 → ' + (d.L != null ? d.L + 'ms' : '测量失败') + (d.TI != null ? ' · 点击开销 ' + d.TI + 'ms' : ''));
   }
 
   async function screenSize(d) {
@@ -189,8 +202,10 @@
     const [x, y] = tapXY(a, d);
     const n = Math.max(1, Math.min(200, +a.n || 5));
     if (n <= 1) return `input tap ${x} ${y}`;   // 单次：不带循环与尾巴 sleep，杜绝任何多点可能
-    const gap = Math.max(0.05, (+a.gap || 400) / 1000).toFixed(3);
-    const loop = `for i in $(seq 1 ${n}); do input tap ${x} ${y}; sleep ${gap}; done`;
+    // 间隔补偿：扣除实测的 input 命令执行开销，使「间隔」≈ 两次点击的实际间隔
+    const compensate = cfg.comp && d.TI > 30;
+    const gap = Math.max(50, (+a.gap || 400) - (compensate ? d.TI : 0)) / 1000;
+    const loop = `for i in $(seq 1 ${n}); do input tap ${x} ${y}; if [ $i -lt ${n} ]; then sleep ${gap.toFixed(3)}; fi; done`;
     if (a.type === 'wake') {
       const W = d.W || 1080, H = d.H || 2340;
       return `input keyevent 224; sleep 0.6; input swipe ${Math.round(W / 2)} ${Math.round(H * 0.72)} ${Math.round(W / 2)} ${Math.round(H * 0.3)} 300; sleep 1; ` + loop;
@@ -290,7 +305,7 @@
 
   function spawnSimple(a, d) {
     const s = genScript(a, d);
-    if (cfg.dry) { log('【演练】→ ' + (d.name || d.serial) + '：' + s.slice(0, 70)); return; }
+    if (cfg.dry) { log('【演练】→ ' + (d.name || d.serial) + '：' + s.slice(0, 120)); return; }
     runScript(d, s, '⚡');
   }
 
@@ -299,7 +314,7 @@
     const halfL = (cfg.cal && d.L != null) ? d.L / 2 : 0;
     const sleepS = Math.max(0, (fireAt - (now + halfL)) / 1000);
     const s = (sleepS > 0.03 ? 'sleep ' + sleepS.toFixed(3) + '\n' : '') + genScript(a, d);
-    if (cfg.dry) { log('【演练·预发射】→ ' + (d.name || d.serial) + ' sleep=' + sleepS.toFixed(3) + 's：' + genScript(a, d).slice(0, 50)); return; }
+    if (cfg.dry) { log('【演练·预发射】→ ' + (d.name || d.serial) + ' sleep=' + sleepS.toFixed(3) + 's：' + genScript(a, d).slice(0, 120)); return; }
     runScript(d, s, '⚡预');
   }
 
@@ -446,12 +461,19 @@
   function renderStatus() {
     const s = $('adb-status');
     if (!s) return;
-    if (adbOk && adbAncient) {
-      s.textContent = '⚠ adb ' + (adbVer || '') + '（版本过旧）——USB 可用，但 Android 11+ 无线调试无法握手。点「⬇ 升级 adb」安装官方最新组件';
+    // 只留一句话 + 颜色；技术细节放悬停提示，不占版面
+    if (!adbOk) {
+      s.textContent = '未找到 adb';
+      s.title = '未在系统与常见路径找到 adb：点「下载 adb」一键安装官方组件（约 6MB），或在上方路径框指定 adb.exe 后点「检测」';
+      s.style.color = 'var(--warm)';
+    } else if (adbAncient) {
+      s.textContent = '⚠ adb 过旧（' + (adbVer || '') + '）';
+      s.title = '该版本 USB 可用，但 Android 11+ 无线调试（TLS）无法握手——点「升级 adb」安装官方最新组件后重连无线即可';
       s.style.color = 'var(--warm)';
     } else {
-      s.textContent = adbOk ? '✓ adb ' + (adbVer || '') + ' · ' + adbPath : '✗ 未找到 adb —— 安装 platform-tools 或手动填写路径后点「检测」';
-      s.style.color = adbOk ? '#4dffa6' : 'var(--warm)';
+      s.textContent = '✓ 就绪 · adb ' + (adbVer || '');
+      s.title = adbPath;
+      s.style.color = '#4dffa6';
     }
     refreshArmedBtn();
     syncGuide();
@@ -722,6 +744,8 @@
     $('adb-cal').addEventListener('change', e => { cfg.cal = e.target.checked; save(); });
     $('adb-precise').checked = cfg.precise;
     $('adb-precise').addEventListener('change', e => { cfg.precise = e.target.checked; save(); });
+    $('adb-comp').checked = cfg.comp;
+    $('adb-comp').addEventListener('change', e => { cfg.comp = e.target.checked; save(); log('间隔补偿 ' + (cfg.comp ? '开启（间隔≈实际点击间隔）' : '关闭（间隔=纯 sleep 时长）')); });
     $('adb-dry').checked = cfg.dry;
     $('adb-dry').addEventListener('change', e => { cfg.dry = e.target.checked; save(); log('演练模式 ' + (cfg.dry ? '开启（只记日志不执行）' : '关闭')); });
     $('adb-path').value = cfg.path || '';
@@ -748,12 +772,16 @@
   TC.ADB = {
     debug() { return { adbOk, adbPath, adbVer, adbAncient, enabled: cfg.enabled, armed, plannedN, spawnedN: spawnedKeys.size, pending: timers.length, cfg, devices: [...devs.values()], logs: logs.slice(0, 12) }; },
     // 测试钩子：注入模拟在线设备（配合演练模式做确定性回归；test 标记使其免疫扫描清理，永不参与真实发射）
-    _dev(serial) {
-      const d = { serial, name: '模拟机', state: 'device', model: 'TEST', L: 100, W: 1080, H: 2340, on: true, probedAt: TC.time.epoch(), test: true };
+    _dev(serial, TI) {
+      const d = { serial, name: '模拟机', state: 'device', model: 'TEST', L: 100, W: 1080, H: 2340, TI: TI != null ? TI : 0, on: true, probedAt: TC.time.epoch(), test: true };
       devs.set(serial, d);
       cfg.devices[serial] = cfg.devices[serial] || { name: d.name, on: true };
       renderDevices();
       return d;
+    },
+    // 调试/测试：直接查看某设备将生成的脚本
+    genScript(a, serial) {
+      return genScript(a, devs.get(serial) || { serial: serial || '?', W: 1080, H: 2340 });
     },
     detect, scan, testFire, arm, pickPoint, openPicker, setEnabled, removeDevice,
     dry(v) { cfg.dry = !!v; save(); }

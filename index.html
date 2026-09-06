@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=129">
+<link rel="stylesheet" href="css/style.css?v=131">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -108,17 +108,16 @@
     </label>
     <div id="adb-guide" hidden></div>
     <div class="row"><input id="adb-path" placeholder="adb.exe 路径（留空自动检测）"><button id="adb-detect">检测</button></div>
-    <div id="adb-status" class="small">—</div>
-    <div class="row"><button id="adb-download" hidden>⬇ 下载 adb</button></div>
+    <div class="row"><span id="adb-status" class="small" style="flex:1">—</span><button id="adb-download" hidden>⬇ 下载 adb</button></div>
     <div class="row adb-gate"><button id="adb-scan" class="primary">扫描设备</button><input id="adb-connect" placeholder="IP:端口 无线连接"><button id="adb-connect-btn">连接</button></div>
     <div id="adb-devices" class="adb-gate"></div>
-    <div class="row globals adb-gate">
+    <div class="row globals adb-gate" title="点击时刻 = 节点 − 提前量 − 传输延迟（自动校准）；各项含义见悬停提示">
       <span>提前量</span><input id="adb-lead" type="number" style="width:58px"><span>ms</span>
       <label class="ck-inline" title="发射时自动扣除每台设备的实测传输延迟"><input id="adb-cal" type="checkbox">延迟校准</label>
       <label class="ck-inline" title="提前 1.8s 发出命令，由设备端 sleep 对齐到点时刻，多设备同步更精准"><input id="adb-precise" type="checkbox">预发射</label>
+      <label class="ck-inline" title="扣除实测的 input 命令执行开销，使「间隔」≈ 两次点击的实际间隔（先点「校」测出开销）"><input id="adb-comp" type="checkbox">间隔补偿</label>
       <label class="ck-inline" title="只记日志，不真正执行"><input id="adb-dry" type="checkbox">演练</label>
     </div>
-    <div class="dim small adb-gate" style="margin:-2px 0 6px">点击时刻 = 节点 − 提前量 − 传输延迟（自动校准）</div>
     <div id="adb-actions" class="adb-gate"></div>
     <div class="row adb-gate">
       <select id="adb-add-type" title="动作类型（默认连点）">
@@ -196,16 +195,16 @@
 
 <noscript>TIMECORE 需要 JavaScript。</noscript>
 <script src="vendor/three.min.js"></script>
-<script src="js/core.js?v=129"></script>
-<script src="js/time-sync.js?v=129"></script>
-<script src="js/clock.js?v=129"></script>
-<script src="js/countdown.js?v=129"></script>
-<script src="js/beats.js?v=129"></script>
-<script src="js/audio.js?v=129"></script>
-<script src="js/scene3d.js?v=129"></script>
-<script src="js/ui.js?v=129"></script>
-<script src="js/adb.js?v=129"></script>
-<script src="js/main.js?v=129"></script>
-<script src="js/test.js?v=129"></script>
+<script src="js/core.js?v=131"></script>
+<script src="js/time-sync.js?v=131"></script>
+<script src="js/clock.js?v=131"></script>
+<script src="js/countdown.js?v=131"></script>
+<script src="js/beats.js?v=131"></script>
+<script src="js/audio.js?v=131"></script>
+<script src="js/scene3d.js?v=131"></script>
+<script src="js/ui.js?v=131"></script>
+<script src="js/adb.js?v=131"></script>
+<script src="js/main.js?v=131"></script>
+<script src="js/test.js?v=131"></script>
 </body>
 </html>
