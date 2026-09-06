@@ -14,6 +14,8 @@
   let timers = [];
   const logs = [];
   let plannedN = 0, armed = false, lastSig = '';
+  let spawnedKeys = new Set();   // 已实际发射的「动作×设备×节点」：adb 进程一旦发出无法撤回，重排不得二次发射
+  let lastArmNode = 0;
 
   function load() {
     let c = {};
@@ -108,13 +110,14 @@
         if (stale) probe(d, true);
       }
     }
-    for (const s of [...devs.keys()]) if (!seen.has(s)) devs.delete(s);   // cfg.devices 保留命名
+    for (const s of [...devs.keys()]) if (!seen.has(s) && !(devs.get(s).test)) devs.delete(s);   // cfg.devices 保留命名；test 标记的虚拟设备不清
     await Promise.all(nameJobs.map(fn => fn()));
     const sig = devsSig();
     const changed = sig !== lastSig;
     if (changed) { lastSig = sig; renderDevices(); renderChipsAll(); }
-    save();
-    syncGuide();   // 引导卡与状态灯跟随设备数/就绪态变化（无变化时也是廉价刷新）
+    // 自动轮询（抽屉开着每 5s）无变化时不落盘：save 会触发齐射重排，无意义的重排会撞上发射窗口
+    if (changed || nameJobs.length) save();
+    syncGuide();
     if (!silent || changed) log('扫描完成：' + seen.size + ' 台设备');   // 自动刷新时无变化不打日志
   }
   function devsSig() {
@@ -166,6 +169,7 @@
     }
     const [x, y] = tapXY(a, d);
     const n = Math.max(1, Math.min(200, +a.n || 5));
+    if (n <= 1) return `input tap ${x} ${y}`;   // 单次：不带循环与尾巴 sleep，杜绝任何多点可能
     const gap = Math.max(0.05, (+a.gap || 400) / 1000).toFixed(3);
     const loop = `for i in $(seq 1 ${n}); do input tap ${x} ${y}; sleep ${gap}; done`;
     if (a.type === 'wake') {
@@ -235,6 +239,7 @@
   // node 为绝对 epoch（倒计时的 target 节点）；quiet = 重排不打日志
   function arm(node, quiet) {
     clearTimers();
+    if (node !== lastArmNode) { spawnedKeys.clear(); lastArmNode = node; }   // 新节点才清发射记录；同节点重排要靠它防双发
     if (!hasElectron || !cfg.enabled) return;
     if (!adbOk) { if (enabledActions().length) log('⚠ adb 不可用，齐射未布防'); return; }
     const now = TC.time.epoch();
@@ -244,18 +249,24 @@
       for (const d of targetsOf(a)) {
         const fireAt = node - wakeFor(a, d);
         if (fireAt <= now + 30) { skipped++; continue; }   // 已过节点不补发
-        if (cfg.precise) {
-          const spawnAt = Math.max(now + 40, fireAt - PRESPAWN_MS);
-          timers.push(setTimeout(() => spawnPrecise(a, d, fireAt), spawnAt - now));
-        } else {
-          timers.push(setTimeout(() => spawnSimple(a, d), Math.max(now + 40, fireAt) - now));
-        }
+        // 预发射模式提前 PRESPAWN_MS 拉起进程；发射窗口内发生的重排会立即拉起——靠 fireOne 去重防双发
+        const spawnAt = cfg.precise ? Math.max(now + 40, fireAt - PRESPAWN_MS) : Math.max(now + 40, fireAt);
+        timers.push(setTimeout(() => fireOne(a, d, node), spawnAt - now));
         plannedN++;
       }
     }
     armed = plannedN > 0;
     if (armed && !quiet) log('⚡ 布防 ' + plannedN + ' 路发射 → 节点 ' + TC.Clock.wallClock(node) + '.' + pad3(node) + (cfg.dry ? '（演练）' : ''));
     refreshArmedBtn();
+  }
+
+  // 发射闸门：同一「动作×设备×倒计时节点」只允许真正拉起一次 adb 进程。
+  // 键必须用 node 而非 fireAt：fireAt 依赖设备延迟 L，扫描重测延迟会改变它从而绕过去重 → 双发
+  function fireOne(a, d, node) {
+    const key = a.id + ':' + d.serial + ':' + node;
+    if (spawnedKeys.has(key)) return;
+    spawnedKeys.add(key);
+    if (cfg.precise) spawnPrecise(a, d, lastArmNode - wakeFor(a, d)); else spawnSimple(a, d);
   }
 
   function spawnSimple(a, d) {
@@ -402,9 +413,10 @@
     if (!hasElectron) return;
     (async () => { if (adbOk && devs.size) await scan(true); arm(i.target); })();
   });
+  const haltAll = () => { clearTimers(); spawnedKeys.clear(); };   // 停止/完成：定时器与发射记录全部作废
   TC.bus.on('cd:advance', () => { if (hasElectron) arm(TC.Countdown.info().target); });
-  TC.bus.on('cd:stop', clearTimers);
-  TC.bus.on('cd:done', clearTimers);
+  TC.bus.on('cd:stop', haltAll);
+  TC.bus.on('cd:done', haltAll);
   TC.bus.on('cd:zero', () => {
     if (hasElectron && armed && plannedN) TC.UI.toast('⚡ ADB 齐射 ' + plannedN + ' 路' + (cfg.dry ? '（演练）' : '已派出'));
   });
@@ -603,7 +615,7 @@
     cfg.enabled = !!v;
     save();
     if (!cfg.enabled) {
-      clearTimers();
+      haltAll();
     } else if (hasElectron) {
       detect().then(() => { if (adbOk && devs.size) scan(); });
       const info = TC.Countdown.info();
@@ -691,7 +703,15 @@
 
   /* ---------- 调试接口 ---------- */
   TC.ADB = {
-    debug() { return { adbOk, adbPath, adbVer, enabled: cfg.enabled, armed, plannedN, pending: timers.length, cfg, devices: [...devs.values()], logs: logs.slice(0, 12) }; },
+    debug() { return { adbOk, adbPath, adbVer, enabled: cfg.enabled, armed, plannedN, spawnedN: spawnedKeys.size, pending: timers.length, cfg, devices: [...devs.values()], logs: logs.slice(0, 12) }; },
+    // 测试钩子：注入模拟在线设备（配合演练模式做确定性回归；test 标记使其免疫扫描清理，永不参与真实发射）
+    _dev(serial) {
+      const d = { serial, name: '模拟机', state: 'device', model: 'TEST', L: 100, W: 1080, H: 2340, on: true, probedAt: TC.time.epoch(), test: true };
+      devs.set(serial, d);
+      cfg.devices[serial] = cfg.devices[serial] || { name: d.name, on: true };
+      renderDevices();
+      return d;
+    },
     detect, scan, testFire, arm, pickPoint, openPicker, setEnabled,
     dry(v) { cfg.dry = !!v; save(); }
   };

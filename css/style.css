@@ -64,7 +64,7 @@ body.xparent #vignette { display: none; }
 }
 #tz-select option { background: #0b1322; color: var(--txt); }
 .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
-.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #777; box-shadow: 0 0 6px currentColor; }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #777; }
 .badge[data-s="synced"] .dot { background: #4dffa6; }
 .badge[data-s="synced"] b { color: #4dffa6; }
 .badge[data-s="local"] .dot, .badge[data-s="failed"] .dot, .badge[data-s="stale"] .dot { background: var(--warm); }
@@ -94,7 +94,7 @@ body.electron #btn-adb { display: inline-block; }
 #shot-picker[hidden] { display: none; }
 .sp-head { display: flex; align-items: center; gap: 16px; font-size: 14px; margin-bottom: 10px; }
 #sp-title { color: var(--accent); letter-spacing: 0.06em; }
-#sp-xy { color: #eaf6ff; font-size: 20px; margin-left: auto; text-shadow: 0 0 14px rgba(57,215,255,.5); }
+#sp-xy { color: #eaf6ff; font-size: 20px; margin-left: auto; }
 .sp-stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .sp-frame { position: relative; line-height: 0; box-shadow: 0 0 0 1px var(--stroke); border-radius: 10px; overflow: hidden; }
 #sp-img { width: 100%; height: 100%; display: block; cursor: crosshair; -webkit-user-drag: none; user-select: none; }
@@ -134,7 +134,7 @@ body.electron #btn-adb { display: inline-block; }
 .chip.ph-ZERO { color: #fff; border-color: #fff; }
 @keyframes breathe { 50% { opacity: 0.55; } }
 
-#cd-remaining { font-size: 54px; font-weight: 600; line-height: 1.1; margin: 4px 0 2px; color: #eaf6ff; text-shadow: 0 0 24px rgba(57, 215, 255, 0.25); }
+#cd-remaining { font-size: 54px; font-weight: 600; line-height: 1.1; margin: 4px 0 2px; color: #eaf6ff; text-shadow: 0 0 26px rgba(57, 215, 255, 0.35); transition: text-shadow 0.4s; }
 #cd-target { margin-bottom: 8px; }
 
 .cd-ctrl { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; font-size: 12px; }
@@ -180,7 +180,7 @@ body.electron #btn-adb { display: inline-block; }
 }
 #combo[hidden], #zero-msg[hidden] { display: none; }
 #combo .cap { font-size: 11px; letter-spacing: 0.28em; color: var(--dim); }
-#combo-num { font-size: 34px; font-weight: 700; line-height: 1; color: #eaf6ff; text-shadow: 0 0 18px rgba(57, 215, 255, 0.5); }
+#combo-num { font-size: 34px; font-weight: 700; line-height: 1; color: #eaf6ff; }
 #combo-num.hot { color: var(--warm); }
 #combo-num.rage { color: var(--pulse); }
 
@@ -365,7 +365,7 @@ body.electron .clock-panel, body.electron .ctrl-panel { top: 40px; }
 .a-shot-empty { padding: 30px 8px; text-align: center; }
 .a-cross {
   position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px;
-  border: 2px solid #ff5d7a; border-radius: 50%; box-shadow: 0 0 8px #ff5d7a; pointer-events: none;
+  border: 2px solid #ff5d7a; border-radius: 50%; pointer-events: none;
 }
 .a-cross::after {
   content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px;
@@ -402,6 +402,11 @@ body[data-phase="WARMUP"] #app .panel { border-color: rgba(255, 179, 71, 0.3); }
 body[data-phase="SURGE"] #app .panel { border-color: rgba(255, 140, 59, 0.38); }
 body[data-phase="PULSE"] #app .panel { border-color: rgba(255, 77, 94, 0.45); box-shadow: 0 10px 34px rgba(255, 40, 70, 0.12); }
 body[data-phase="ZERO"] #app .panel { border-color: rgba(255, 255, 255, 0.55); }
+/* 辉光配额：常驻辉光唯一归属 = 倒计时数字（随阶段变色）；其余辉光只允许瞬时反馈（judge/zero） */
+body[data-phase="WARMUP"] #cd-remaining { text-shadow: 0 0 26px rgba(255, 179, 71, 0.5); }
+body[data-phase="SURGE"] #cd-remaining { text-shadow: 0 0 28px rgba(255, 140, 59, 0.6); }
+body[data-phase="PULSE"] #cd-remaining { text-shadow: 0 0 30px rgba(255, 77, 94, 0.65); }
+body[data-phase="ZERO"] #cd-remaining { text-shadow: 0 0 32px rgba(255, 255, 255, 0.85); }
 
 /* ---------- 首次启动欢迎卡 ---------- */
 #welcome {
@@ -411,7 +416,7 @@ body[data-phase="ZERO"] #app .panel { border-color: rgba(255, 255, 255, 0.55); }
 }
 #welcome[hidden] { display: none; }
 .wl-card { padding: 30px 42px 24px; text-align: center; max-width: min(440px, calc(100vw - 30px)); max-height: calc(100vh - 30px); overflow: auto; margin: auto; }
-.wl-logo { font-size: 40px; line-height: 1; color: var(--accent); text-shadow: 0 0 30px rgba(57, 215, 255, 0.8); animation: breathe 2.6s ease-in-out infinite; }
+.wl-logo { font-size: 40px; line-height: 1; color: var(--accent); animation: breathe 2.6s ease-in-out infinite; }
 .wl-card h2 { margin: 12px 0 8px; font-size: 18px; letter-spacing: 0.14em; color: #eaf6ff; }
 .wl-card p { margin: 0 0 18px; font-size: 13px; line-height: 1.9; }
 .wl-btns { display: flex; flex-direction: column; gap: 9px; }
@@ -432,16 +437,16 @@ body.mini .wl-card p, body.mini .wl-note { display: none; }   /* 迷你窗口只
 
 /* ---------- 标题栏状态灯（校时 · ADB · 音频） ---------- */
 .tb-lights { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
-.tb-lights i { width: 7px; height: 7px; border-radius: 50%; background: #555; box-shadow: 0 0 6px rgba(0, 0, 0, 0.4); }
-.tb-lights i[data-s="ok"] { background: #4dffa6; box-shadow: 0 0 7px #4dffa6; }
-.tb-lights i[data-s="busy"] { background: #8ab6ff; box-shadow: 0 0 7px #8ab6ff; animation: breathe 1.2s ease-in-out infinite; }
-.tb-lights i[data-s="warn"] { background: var(--warm); box-shadow: 0 0 7px var(--warm); }
+.tb-lights i { width: 7px; height: 7px; border-radius: 50%; background: #555; }
+.tb-lights i[data-s="ok"] { background: #4dffa6; }
+.tb-lights i[data-s="busy"] { background: #8ab6ff; animation: breathe 1.2s ease-in-out infinite; }
+.tb-lights i[data-s="warn"] { background: var(--warm); }
 .tb-lights i[data-s="off"] { background: #555; }
 
 /* ---------- 开始/停止按钮状态化 ---------- */
 .cd-ctrl button:disabled, .chip-btn:disabled { opacity: 0.35; cursor: default; }
 .cd-ctrl button:disabled:hover { background: rgba(255, 255, 255, 0.06); }
-#cd-start.running { box-shadow: 0 0 14px rgba(57, 215, 255, 0.35); }
+#cd-start.running { border-color: rgba(57, 215, 255, 0.85); }
 
 /* ---------- ADB 引导卡 + 未启用门槛 ---------- */
 #adb-guide {
