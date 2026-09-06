@@ -22,6 +22,7 @@ function createWindow() {
     backgroundColor: '#00000000',
     fullscreenable: true,
     title: 'TIMECORE',
+    icon: pathM.join(__dirname, '..', 'build', 'icon.ico'),
     webPreferences: {
       preload: pathM.join(__dirname, 'preload.js'),
       contextIsolation: true,
