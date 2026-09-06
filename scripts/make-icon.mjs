@@ -1,9 +1,33 @@
-/* 生成 build/icon.ico：256×256 PNG（RGBA）封装进 ICO 容器
+/* 生成 build/icon.ico
+ * 优先使用 build/icon-source.png（外部生成，256×256 RGBA）直接封装；
+ * 不存在则回退到内置绘制的圆环图案。
  * 运行：node scripts/make-icon.mjs */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { deflateSync, crc32 } from 'node:zlib';
 
 mkdirSync(new URL('../build/', import.meta.url), { recursive: true });
+const SOURCE = new URL('../build/icon-source.png', import.meta.url);
+
+function wrapIco(png) {
+  const icon = Buffer.alloc(6 + 16 + png.length);
+  icon.writeUInt16LE(0, 0); icon.writeUInt16LE(1, 2); icon.writeUInt16LE(1, 4);
+  icon[6] = 0; icon[7] = 0;                 // 256 用 0 表示
+  icon.writeUInt16LE(1, 10); icon.writeUInt16LE(32, 12);
+  icon.writeUInt32LE(png.length, 14);
+  icon.writeUInt32LE(22, 18);
+  png.copy(icon, 22);
+  return icon;
+}
+
+if (existsSync(SOURCE)) {
+  const png = readFileSync(SOURCE);
+  if (png.length < 100 || png[0] !== 0x89) throw new Error('icon-source.png 不是有效的 PNG');
+  writeFileSync(new URL('../build/icon.ico', import.meta.url), wrapIco(png));
+  console.log('build/icon.ico 生成完成（外部源图）:', png.length, 'bytes');
+  process.exit(0);
+}
+
+// 回退：内置绘制的圆环图案
 const SIZE = 256;
 const raw = Buffer.alloc(SIZE * (SIZE * 4 + 1));   // 每行前置 filter byte 0
 
