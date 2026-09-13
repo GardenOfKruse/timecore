@@ -244,6 +244,10 @@
       }
       const ovCloseBtn = document.getElementById('ov-close');
       if (ovCloseBtn) ovCloseBtn.addEventListener('click', toggleClockMode);
+      // 纯钟面形态：双击任意处退出（无可见按钮）
+      document.querySelector('.clock-panel').addEventListener('dblclick', () => {
+        if (document.body.classList.contains('clockmode')) toggleClockMode();
+      });
       // 形态状态同步：乐观切换 + 定期从主进程回读（覆盖直接 IPC / 边缘时序）
       const syncClockMode = () => window.electronAPI.get().then(st => {
         document.body.classList.toggle('clockmode', !!st.clock);
@@ -386,12 +390,12 @@
   }
   window.addEventListener('resize', () => { clearTimeout(densTimer); densTimer = setTimeout(applyDensity, 120); });
 
-  /* 仅时间形态：同一窗口的钟面形态（Ctrl+1 / 标题栏 ◉ 切换；主进程记住原尺寸，退出即还原） */
+  /* 仅时间形态：同一窗口的钟面形态（Ctrl+1 / 标题栏 ◉ / 双击钟面 退出） */
   function toggleClockMode() {
     const on = !document.body.classList.contains('clockmode');
     document.body.classList.toggle('clockmode', on);
     if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
-    toast(on ? '仅时间形态：Ctrl+1 退出 · 面板可拖动 · 「穿透」可让鼠标穿过' : '已退出仅时间形态');
+    toast(on ? '仅时间形态：Ctrl+1 / Esc / 双击钟面 退出 · 拖动面板移动' : '已退出仅时间形态');
   }
 
   // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用
