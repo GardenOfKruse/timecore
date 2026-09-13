@@ -470,12 +470,14 @@ body.clockmode .cd-panel, body.clockmode .ctrl-panel, body.clockmode #drawer, bo
 body.clockmode #combo, body.clockmode #judge-pop, body.clockmode #zero-msg, body.clockmode #toast,
 body.clockmode #flash, body.clockmode #shot-picker, body.clockmode #about-pop { display: none !important; }
 body.clockmode .clock-panel {
-  position: fixed; inset: 0; padding: 10px 14px 8px;
+  position: fixed; inset: 0; padding: 8px 12px 6px;
   background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
   backdrop-filter: blur(12px); -webkit-app-region: drag;   /* 面板即拖拽区 */
 }
-body.clockmode #clock-hms { font-size: 30px; }
-body.clockmode #clock-ms { font-size: 14px; }
+body.clockmode .row-main { flex-wrap: nowrap; }   /* 280px 会命中移动端换行规则，钟面必须单行 */
+body.clockmode #clock-hms { font-size: 26px; }
+body.clockmode #clock-ms { font-size: 12px; }
+body.clockmode #clock-date { display: none; }   /* 钟面宽度有限，日期让位给时区+校时状态 */
 body.clockmode .row-sub { margin-top: 2px; gap: 8px; font-size: 11px; -webkit-app-region: no-drag; }
 body.clockmode #tz-select { max-width: 88px; font-size: 10px; padding: 1px 4px; }
 body.clockmode .badge { font-size: 10px; }
