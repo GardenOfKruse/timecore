@@ -471,6 +471,7 @@ body.clockmode #combo, body.clockmode #judge-pop, body.clockmode #zero-msg, body
 body.clockmode #flash, body.clockmode #shot-picker, body.clockmode #about-pop { display: none !important; }
 body.clockmode .clock-panel {
   position: fixed; inset: 0; padding: 6px 12px;
+  max-width: none; max-height: none;   /* 解除移动端媒体查询的 max 约束（280px 下会压成 108px） */
   display: flex; align-items: center; justify-content: center;
   background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
   backdrop-filter: blur(12px); -webkit-app-region: drag;   /* 面板即拖拽区 */
