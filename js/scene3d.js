@@ -6,7 +6,7 @@
   let coreGroup, planet, clouds, atmo, atmoMat, flash, ringGroup, ringMat, tipGlow, warmRing, warmMat;
   let orbits = [], sats = [], points, pPos, pVel, pCount, pMat;
   let shafts = [], shocks = [], shockIdx = 0;
-  let shake = 0, flashT = -1, warmO = 0, warmTgt = 0;
+  let shake = 0, flashT = -1, warmO = 0, warmTgt = 0, pAcc = 0;
   let hue = parseInt(localStorage.getItem('tc.hue'), 10); if (!isFinite(hue)) hue = 192;
   let quality = 2;                      // 2 高 / 1 中 / 0 低
   let fpsAcc = 0, fpsN = 0, fpsTimer = 0;
@@ -501,22 +501,27 @@
       s.m.position.set(Math.cos(a) * s.r, Math.sin(a) * s.r, 0);
     }
 
-    // 粒子
+    // 粒子：30fps 限频（dt 累积器，物理用累积 dt 保证一致）——零点特效高峰期不与 UI 抢主线程
     if (points && points.visible) {
-      const spd = cur.pSpeed;
-      for (let i = 0; i < pCount; i++) {
-        const i3 = i * 3;
-        pPos[i3] += pVel[i3] * dt * spd;
-        pPos[i3 + 1] += pVel[i3 + 1] * dt * spd;
-        pPos[i3 + 2] += pVel[i3 + 2] * dt * spd;
-        // 阻尼回落 + 出界重生
-        pVel[i3] *= (1 - dt * 0.4); pVel[i3 + 1] *= (1 - dt * 0.4); pVel[i3 + 2] *= (1 - dt * 0.4);
-        const r2 = pPos[i3] ** 2 + pPos[i3 + 1] ** 2 + pPos[i3 + 2] ** 2;
-        if (r2 > 49 || r2 < 0.05) respawn(i, false);
+      pAcc += dt;
+      if (pAcc >= 1 / 30) {
+        const pd = Math.min(pAcc, 0.2);   // 大步长钳制，防切回前台时一次性大积分
+        pAcc = 0;
+        const spd = cur.pSpeed;
+        for (let i = 0; i < pCount; i++) {
+          const i3 = i * 3;
+          pPos[i3] += pVel[i3] * pd * spd;
+          pPos[i3 + 1] += pVel[i3 + 1] * pd * spd;
+          pPos[i3 + 2] += pVel[i3 + 2] * pd * spd;
+          // 阻尼回落 + 出界重生
+          pVel[i3] *= (1 - pd * 0.4); pVel[i3 + 1] *= (1 - pd * 0.4); pVel[i3 + 2] *= (1 - pd * 0.4);
+          const r2 = pPos[i3] ** 2 + pPos[i3 + 1] ** 2 + pPos[i3 + 2] ** 2;
+          if (r2 > 49 || r2 < 0.05) respawn(i, false);
+        }
+        points.geometry.attributes.position.needsUpdate = true;
+        points.rotation.y = t * 0.02;
+        pMat.opacity = 0.5 + cur.intensity * 0.3;
       }
-      points.geometry.attributes.position.needsUpdate = true;
-      points.rotation.y = t * 0.02;
-      pMat.opacity = 0.5 + cur.intensity * 0.3;
     }
 
     // 体积光

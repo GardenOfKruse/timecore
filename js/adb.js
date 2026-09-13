@@ -6,7 +6,8 @@
   const PRESPAWN_MS = 1800;
 
   // enabled 默认关：首次使用先引导配置（老用户的已存值以 localStorage 为准，不受影响）
-  const DEF = { path: '', leadMs: 300, cal: true, precise: true, comp: true, dry: false, enabled: false, seeded: false, devices: {}, actions: [] };
+  // leadMs 默认 100（2026-09 调整，旧默认 300；仅影响新用户，老用户保留已存值）
+  const DEF = { path: '', leadMs: 100, cal: true, precise: true, comp: true, dry: false, enabled: false, seeded: false, devices: {}, actions: [] };
   let cfg = load();
   let adbPath = cfg.path || '';
   let adbOk = false, adbVer = '';

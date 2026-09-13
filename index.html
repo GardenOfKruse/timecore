@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=132">
+<link rel="stylesheet" href="css/style.css?v=133">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -22,6 +22,7 @@
       <span id="clock-date" class="dim">—</span>
       <select id="tz-select" data-testid="tz" title="切换时区"></select>
       <span id="sync-badge" data-testid="sync" class="badge"><i class="dot"></i><b>本地时钟</b></span>
+      <span id="ov-bar"><button id="ov-ct" title="点击穿透：开启后鼠标穿透悬浮钟（主窗口 Ctrl+1 隐藏再显示可解除）">穿透</button><button id="ov-close" title="关闭悬浮钟">✕</button></span>
     </div>
   </section>
 
@@ -29,7 +30,7 @@
   <nav class="panel ctrl-panel" data-testid="ctrl">
     <button id="btn-mute" title="静音 (M)">♪</button>
     <button id="btn-freerun" title="自由节拍器 (B)">⌁</button>
-    <button id="btn-compact" title="窗口尺寸：迷你 / 紧凑 / 标准 (C)">▢</button>
+    <button id="btn-compact" title="窗口尺寸循环：标准/宽屏/窄屏/手机屏/小窗 (C)">▢</button>
     <button id="btn-fullscreen" title="全屏 (F)">⛶</button>
     <button id="btn-adb" title="ADB 齐射（仅桌面端）">ADB</button>
     <button id="btn-settings" title="设置">⚙</button>
@@ -86,6 +87,7 @@
     <label class="row">主色相 <input id="set-hue" type="range" min="0" max="360" step="1"></label>
     <label class="row">音量 <input id="set-vol" type="range" min="0" max="100" step="1"></label>
     <label class="row">节拍提示音 <select id="set-tick"><option value="1">开</option><option value="0">关</option></select> 起始秒 <input id="set-softlead" type="number" min="3" max="60" style="width:46px"></label>
+    <label class="ck"><input id="set-metrofull" type="checkbox"> 倒计时全程节拍（节拍器开启时每秒提示）</label>
     <label class="row">到点反馈 <select id="set-zero"><option value="0">低 · 仅闪光</option><option value="1">中</option><option value="2" selected>高 · 全特效</option></select></label>
     <label class="row">提示音量 <input id="set-gbeat" type="range" min="0" max="100"></label>
     <label class="row">到点音量 <input id="set-gcue" type="range" min="0" max="100"></label>
@@ -96,7 +98,7 @@
     </div>
     <label class="row btns"><span>窗口透明度</span><input id="set-opacity" type="range" min="30" max="100" step="5" value="100" hidden></label>
     <label class="ck"><input id="set-xparent" type="checkbox"> 透明背景（桌面端生效）</label>
-    <div class="keys dim small">空格 / 左键 击拍 · B 节拍器 · C 窗口尺寸 · F 全屏 · Ctrl+1/2/3 迷你/紧凑/标准 · M 静音 · Esc 关闭</div>
+    <div class="keys dim small">空格 / 左键 击拍 · B 节拍器 · C 循环尺寸 · Ctrl+1 悬浮钟 · Ctrl+2~6 小窗/手机/窄屏/宽屏/标准 · F 全屏 · M 静音 · Esc 关闭</div>
     <div class="about dim small">TIMECORE <span id="drawer-ver" class="digits"></span> · 绝对时间节点驱动 · 网络校时 + 平滑回退</div>
   </aside>
 
@@ -174,6 +176,7 @@
       <span class="tb-lights" title="状态：校时 · ADB · 音频">
         <i id="lt-sync"></i><i id="lt-adb"></i><i id="lt-aud"></i>
       </span>
+      <button id="tb-overlay" title="仅时间悬浮钟 (Ctrl+1)">◉</button>
       <button id="tb-top" title="窗口置顶">置顶</button>
       <button id="tb-min" title="最小化">—</button>
       <button id="tb-fs" title="全屏">全屏</button>
@@ -195,16 +198,16 @@
 
 <noscript>TIMECORE 需要 JavaScript。</noscript>
 <script src="vendor/three.min.js"></script>
-<script src="js/core.js?v=132"></script>
-<script src="js/time-sync.js?v=132"></script>
-<script src="js/clock.js?v=132"></script>
-<script src="js/countdown.js?v=132"></script>
-<script src="js/beats.js?v=132"></script>
-<script src="js/audio.js?v=132"></script>
-<script src="js/scene3d.js?v=132"></script>
-<script src="js/ui.js?v=132"></script>
-<script src="js/adb.js?v=132"></script>
-<script src="js/main.js?v=132"></script>
-<script src="js/test.js?v=132"></script>
+<script src="js/core.js?v=133"></script>
+<script src="js/time-sync.js?v=133"></script>
+<script src="js/clock.js?v=133"></script>
+<script src="js/countdown.js?v=133"></script>
+<script src="js/beats.js?v=133"></script>
+<script src="js/audio.js?v=133"></script>
+<script src="js/scene3d.js?v=133"></script>
+<script src="js/ui.js?v=133"></script>
+<script src="js/adb.js?v=133"></script>
+<script src="js/main.js?v=133"></script>
+<script src="js/test.js?v=133"></script>
 </body>
 </html>

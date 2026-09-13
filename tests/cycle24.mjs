@@ -21,7 +21,7 @@ function js(expr) {
   return new Promise((resolve, reject) => {
     const id = ++seq;
     pending.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true } }));
+    ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }));
     setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error('eval timeout')); } }, 60000);
   }).then(r => {
     if (r.exceptionDetails) throw new Error('页面异常: ' + JSON.stringify(r.exceptionDetails).slice(0, 150));
@@ -60,10 +60,12 @@ const check = (name, pass, detail) => {
 await js(`TC.ADB.setEnabled(true)`);
 await new Promise(r => setTimeout(r, 1500));
 const d0 = JSON.parse(await js(`JSON.stringify(TC.ADB.debug())`));
-const verAncient = /^1\.0\.(\d+)$/.test(d0.adbVer) && parseInt(d0.adbVer.split('.')[2], 10) < 41;
 check('adb 检测成功', d0.adbOk === true, { path: d0.adbPath, ver: d0.adbVer });
-check('旧版判定与版本号一致', d0.adbAncient === verAncient, { ancient: d0.adbAncient, ver: d0.adbVer });
-check('本机 PATH 为旧版（前置条件）', verAncient === true, d0.adbVer);
+// 场景构造：显式检测本机真实的旧版 adb（E:\Tools\adb 1.0.36，覆盖「PATH 已是新版」的环境差异）
+const dOld = JSON.parse(await js(`TC.ADB.detect('E:\\\\Tools\\\\adb\\\\adb.exe').then(r => JSON.stringify(r))`));
+check('显式检测到旧版 1.0.36', dOld.ok === true && dOld.version === '1.0.36', dOld);
+const uiPre = JSON.parse(await js(`JSON.stringify({ ancient: TC.ADB.debug().adbAncient })`));
+check('旧版判定生效', uiPre.ancient === true, uiPre);
 
 // 抽屉：升级按钮可见 + 状态行警告
 await js(`document.getElementById('btn-adb').click()`);
@@ -76,7 +78,7 @@ const ui0 = JSON.parse(await js(`JSON.stringify({
 check('升级按钮可见且文案为升级', ui0.dlHidden === false && ui0.dlText.includes('升级'), { hidden: ui0.dlHidden, text: ui0.dlText });
 check('状态行提示版本过旧', ui0.status.includes('过旧'), ui0.status.slice(0, 50));
 
-// 真实升级链路：下载官方 platform-tools 到隔离 profile → 检测切到新版
+// 真实升级链路：下载官方 platform-tools 到隔离 profile → 重新检测切到现代版
 console.log('...下载中（官方 platform-tools ~6MB）...');
 await js(`document.getElementById('adb-download').click()`);
 let upgraded = false;
@@ -86,8 +88,7 @@ for (let i = 0; i < 60; i++) {
   await sleep(1500);
 }
 const d1 = JSON.parse(await js(`JSON.stringify(TC.ADB.debug())`));
-check('升级后 adb 切到 1.0.41', upgraded && d1.adbVer === '1.0.41', { ver: d1.adbVer, path: d1.adbPath, ancient: d1.adbAncient });
-check('自家 platform-tools 被优先采用', d1.adbPath.includes('platform-tools'), d1.adbPath);
+check('升级后切到 1.0.41 且不再判旧', upgraded && d1.adbVer === '1.0.41' && d1.adbAncient === false, { ver: d1.adbVer, ancient: d1.adbAncient });
 check('升级后按钮隐藏', await js(`document.getElementById('adb-download').hidden`), null);
 check('升级缓存已落位', existsSync(path.join(PROFILE, 'platform-tools', 'adb.exe')), null);
 

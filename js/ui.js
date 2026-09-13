@@ -63,7 +63,11 @@
     el.phase.textContent = info.phaseLabel;
     el.phase.className = 'chip ph-' + info.phase;
 
-    if (info.armed) {
+    if (info.fired && info.hasNext) {
+      // 驻留期（armed 仍为 true，必须先判 fired）：大数字停在 00:00，小字预告下一轮从哪一刻开始
+      const nextNode = info.target + (info.durMs || info.periodMs || 0);
+      el.target.textContent = '下一轮 ' + fmtPeriod(info.durMs || info.periodMs) + ' · ' + fmtTrigger(nextNode) + ' 开始';
+    } else if (info.armed) {
       let line = fmtTrigger(info.target);
       if (info.mode === 'cycles') line += ' · 第 ' + info.cycleIndex + '/' + (info.infinite ? '∞' : info.cycles) + ' 轮';
       if (info.aligned) line += ' · 每' + fmtPeriod(info.periodMs);
@@ -185,6 +189,14 @@
     el.tick.addEventListener('change', () => TC.Audio.setTick(el.tick.value === '1'));
     el.softlead.value = TC.Audio.softLead;
     el.softlead.addEventListener('input', () => TC.Audio.setSoftLead(el.softlead.value));
+    const mf = document.getElementById('set-metrofull');
+    if (mf) {
+      mf.checked = TC.Audio.info().metroFull;
+      mf.addEventListener('change', () => {
+        localStorage.setItem('tc.metrofull', mf.checked ? '1' : '0');
+        toast(mf.checked ? '倒计时全程节拍：开（节拍器开启时每秒提示）' : '倒计时全程节拍：关（仅最后阶段提示）');
+      });
+    }
     el.zero.value = String(TC.fx.zero);
     el.zero.addEventListener('change', () => { TC.fx.zero = parseInt(el.zero.value, 10) || 0; localStorage.setItem('tc.zerofx', String(TC.fx.zero)); });
     ['beat', 'cue', 'hit'].forEach(cat => {
@@ -218,6 +230,7 @@
       });
       TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
       TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
+      TC.$('tb-overlay').addEventListener('click', () => window.electronAPI.send('overlay', { action: 'toggle' }));
       window.electronAPI.get().then(st => {
         syncFullscreenBtn(st.fs);
         TC.$('tb-top').classList.toggle('active', st.top);
@@ -279,9 +292,11 @@
       } else if (e.code === 'KeyF' && !e.repeat && !isTyping(e.target)) toggleFullscreen();
       else if (e.code === 'KeyC' && !e.repeat && !isTyping(e.target)) toggleCompact();
       else if (e.code === 'KeyM' && !e.repeat && !isTyping(e.target)) { TC.Audio.setMute(!TC.Audio.muted); el.mute.classList.toggle('active', TC.Audio.muted); }
-      else if (e.ctrlKey && !e.repeat && (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit3') && window.electronAPI) {
+      else if (e.ctrlKey && !e.repeat && /^Digit[0-9]$/.test(e.code) && window.electronAPI) {
         e.preventDefault();
-        window.electronAPI.send('size', { preset: { Digit1: 'mini', Digit2: 'compact', Digit3: 'standard' }[e.code] });
+        const mode = { Digit1: '@overlay', Digit2: 'small', Digit3: 'phone', Digit4: 'narrow', Digit5: 'wide', Digit6: 'standard' }[e.code];
+        if (mode === '@overlay') window.electronAPI.send('overlay', { action: 'toggle' });
+        else window.electronAPI.send('size', { preset: mode });
       } else if (e.code === 'Escape') {
         if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
         el.drawer.classList.remove('open');
@@ -324,11 +339,11 @@
     }, 1500);
   }
 
-  /* 尺寸预设：桌面端在 标准→紧凑→迷你 间循环（真实缩放窗口，密度类随宽度自适应）；
-   * 浏览器模式无法缩放系统窗口，退化为旧的 CSS 密度开关 */
-  const SIZE_ORDER = ['standard', 'compact', 'mini'];
+  /* 尺寸预设：桌面端在 标准→宽屏→窄屏→手机屏→小窗 间循环（真实缩放窗口，密度类随宽度自适应）；
+   * 「仅时间」是独立悬浮钟窗口（Ctrl+1），不在此循环内。浏览器模式退化为 CSS 密度开关 */
+  const SIZE_ORDER = ['standard', 'wide', 'narrow', 'phone', 'small'];
   function currentSize() {
-    return innerWidth < 500 ? 'mini' : innerWidth < 780 ? 'compact' : 'standard';
+    return innerWidth < 450 ? 'small' : innerWidth < 500 ? 'phone' : innerWidth < 780 ? 'narrow' : innerWidth < 1240 ? 'standard' : 'wide';
   }
   function toggleCompact() {
     if (window.electronAPI) {
@@ -345,7 +360,7 @@
   let densTimer = 0;
   function applyDensity() {
     const w = innerWidth;
-    document.body.classList.toggle('mini', w < 500);
+    document.body.classList.toggle('mini', w < 450);
     document.body.classList.toggle('compact', w < 780);
     el.compact.classList.toggle('active', w < 780);
   }

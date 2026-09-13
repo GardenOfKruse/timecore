@@ -8,11 +8,24 @@ const pathM = require('path');
 if (process.env.TC_TMP_PROFILE) app.setPath('userData', process.env.TC_TMP_PROFILE);
 
 let win = null;
+let ov = null;               // 仅时间悬浮钟（独立窗口）
+let ovCt = false;            // 悬浮钟点击穿透
+const saveOv = () => { if (ov && !ov.isDestroyed()) { try { fs.writeFileSync(pathM.join(app.getPath('userData'), 'tc-overlay.json'), JSON.stringify({ ...ov.getBounds(), ct: ovCt })); } catch (_) {} } };
 let fsState = false;       // 显式全屏状态：透明窗口上 isFullScreen() 会误报，不能信任
 let prevBounds = null;
 
-/* 窗口尺寸预设（迷你/紧凑/标准）与位置记忆：bounds 存 userData/tc-window.json */
-const PRESETS = { mini: [380, 300], compact: [660, 460], standard: [1180, 760] };
+/* 窗口尺寸预设与位置记忆：bounds 存 userData/tc-window.json
+ * 六模式：全屏(F) / 宽屏 / 窄屏 / 手机屏 / 小窗 / 仅时间悬浮钟（独立窗口，见 overlay 命令）；
+ * mini/compact 为旧版兼容别名 */
+const PRESETS = {
+  standard: [1180, 760],   // 标准
+  wide: [1280, 720],       // 宽屏（16:9）
+  narrow: [560, 760],      // 窄屏
+  phone: [380, 720],       // 手机屏（竖长）
+  small: [480, 320],       // 小窗
+  compact: [660, 460],     // 旧版兼容
+  mini: [380, 300]         // 旧版兼容
+};
 
 function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
 
@@ -104,6 +117,45 @@ ipcMain.on('win', (ev, cmd, arg) => {
       win.setBounds({ x, y, width: w, height: h });
       break;
     }
+    case 'overlay': {
+      // 仅时间悬浮钟：独立置顶小窗（毫秒时钟），支持点击穿透；位置/穿透状态存 tc-overlay.json
+      const action = (arg && arg.action) || 'toggle';
+      if (action === 'clickthrough') {
+        // 必须先于 toggle/show 判定：穿透切换只改状态，绝不能走销毁分支
+        if (ov) {
+          ovCt = !!arg.on;
+          ov.setIgnoreMouseEvents(ovCt, { forward: true });
+        }
+        break;
+      }
+      const want = action === 'toggle' ? !ov : action === 'show';
+      if (!want) {
+        if (ov) { saveOv(); try { ov.destroy(); } catch (_) {} }   // destroy 不触发 close，必须显式保存
+        ov = null;
+        break;
+      }
+      if (!ov) {
+        let b = null;
+        try { b = JSON.parse(fs.readFileSync(pathM.join(app.getPath('userData'), 'tc-overlay.json'), 'utf8')); } catch (_) {}
+        const wa = screen.getPrimaryDisplay().workArea;
+        const x = b && isFinite(b.x) ? b.x : wa.x + wa.width - 280;
+        const y = b && isFinite(b.y) ? b.y : wa.y + 60;
+        ov = new BrowserWindow({
+          x, y, width: 248, height: 76, frame: false, transparent: true, resizable: false,
+          alwaysOnTop: true, skipTaskbar: true, minimizable: false, maximizable: false,
+          backgroundColor: '#00000000', title: 'TIMECORE 悬浮钟',
+          webPreferences: { preload: pathM.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+        });
+        ov.setAlwaysOnTop(true, 'screen-saver');
+        ovCt = !!(b && b.ct);
+        if (ovCt) ov.setIgnoreMouseEvents(true, { forward: true });
+        ov.on('close', saveOv);
+        ov.loadFile(pathM.join(__dirname, '..', 'index.html'), { search: 'overlay=1' });
+      } else {
+        ov.showInactive();
+      }
+      break;
+    }
     case 'open': {
       // 仅允许打开本项目的 GitHub 页面（更新/Releases 跳转）
       const url = String(arg || '');
@@ -114,7 +166,10 @@ ipcMain.on('win', (ev, cmd, arg) => {
   }
 });
 
-ipcMain.handle('win:get', () => ({ top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion() }));
+ipcMain.handle('win:get', () => ({
+  top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion(),
+  overlay: !!ov, overlayCt: ovCt
+}));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */
 const ADB_CMDS = new Set(['detect', 'exec']);

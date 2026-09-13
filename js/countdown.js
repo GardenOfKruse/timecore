@@ -9,7 +9,7 @@
     phase: 'IDLE', fired: false, hasNext: false, holdUntil: 0,
     lastTarget: 0, rem: 0, progress: 0
   };
-  const HOLD_MS = 2600;                 // 释放反馈驻留时长
+  const HOLD_MS = 1800;                 // 释放反馈驻留时长（UI 小字预告下一轮，驻留即结束，不再长时间占屏）
 
   // 下一个对齐节点：本地当日 00:00:00.000 起按 periodMs 划分的边界（5分→09:05:00.000、09:10:00.000…）
   function nextAlignedNode(periodMs, e) {
