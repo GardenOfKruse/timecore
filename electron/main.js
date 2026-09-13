@@ -8,14 +8,12 @@ const pathM = require('path');
 if (process.env.TC_TMP_PROFILE) app.setPath('userData', process.env.TC_TMP_PROFILE);
 
 let win = null;
-let ov = null;               // 仅时间悬浮钟（独立窗口）
-let ovCt = false;            // 悬浮钟点击穿透
-const saveOv = () => { if (ov && !ov.isDestroyed()) { try { fs.writeFileSync(pathM.join(app.getPath('userData'), 'tc-overlay.json'), JSON.stringify({ ...ov.getBounds(), ct: ovCt })); } catch (_) {} } };
+let ctMode = false;          // 仅时间形态下的点击穿透
 let fsState = false;       // 显式全屏状态：透明窗口上 isFullScreen() 会误报，不能信任
 let prevBounds = null;
 
 /* 窗口尺寸预设与位置记忆：bounds 存 userData/tc-window.json
- * 六模式：全屏(F) / 宽屏 / 窄屏 / 手机屏 / 小窗 / 仅时间悬浮钟（独立窗口，见 overlay 命令）；
+ * 六模式同一窗口不同形态：全屏(F) / 标准 / 宽屏 / 窄屏 / 手机屏 / 小窗 / 仅时间(clock：缩到钟面+只显示时钟)；
  * mini/compact 为旧版兼容别名 */
 const PRESETS = {
   standard: [1180, 760],   // 标准
@@ -23,9 +21,12 @@ const PRESETS = {
   narrow: [560, 760],      // 窄屏
   phone: [380, 720],       // 手机屏（竖长）
   small: [480, 320],       // 小窗
+  clock: [280, 96],        // 仅时间
   compact: [660, 460],     // 旧版兼容
   mini: [380, 300]         // 旧版兼容
 };
+let clockMode = false;       // 仅时间形态中
+let clockPrev = null;        // 进入仅时间前的 bounds（退出时还原）
 
 function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
 
@@ -41,8 +42,8 @@ function clampToWork(b) {
 }
 
 function saveBounds() {
-  // 全屏期间不覆盖记忆，否则重开是全屏尺寸；setBounds/移窗都会触发
-  if (!win || win.isDestroyed() || fsState) return;
+  // 全屏与仅时间形态期间不覆盖记忆（钟面尺寸/原尺寸还原交给 clockPrev），否则重开是变形尺寸
+  if (!win || win.isDestroyed() || fsState || clockMode) return;
   try { fs.writeFileSync(boundsFile(), JSON.stringify(win.getBounds())); } catch (_) {}
 }
 function saveBoundsSoon() { clearTimeout(saveBoundsSoon.t); saveBoundsSoon.t = setTimeout(saveBounds, 400); }
@@ -105,7 +106,34 @@ ipcMain.on('win', (ev, cmd, arg) => {
       break;
     }
     case 'size': {
-      // 尺寸预设：保持窗口中心不变，钳到所在显示器工作区；全屏中先退出再应用
+      // 尺寸预设：保持窗口中心不变，钳到所在显示器工作区；全屏中先退出再应用。
+      // 'clock'（仅时间形态）为开关：进入时记住原 bounds，退出时还原——同一窗口的不同形态
+      if (arg && arg.preset === 'clock') {
+        if (clockMode) {
+          clockMode = false; ctMode = false; win.setIgnoreMouseEvents(false);
+          win.setMinimumSize(320, 240);
+          if (clockPrev) win.setBounds(clockPrev);
+          break;
+        }
+        clockPrev = win.getBounds();
+        clockMode = true;
+        if (fsState) { fsState = false; win.setFullScreen(false); }
+        win.setMinimumSize(120, 60);
+        const cur = win.getBounds();
+        const wa = screen.getDisplayMatching(cur).workArea;
+        const w = Math.min(PRESETS.clock[0], wa.width - 10), h = Math.min(PRESETS.clock[1], wa.height - 10);
+        const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
+        const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
+        win.setBounds({ x, y, width: w, height: h });
+        if (ctMode) win.setIgnoreMouseEvents(true, { forward: true });
+        break;
+      }
+      // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
+      if (clockMode) {
+        clockMode = false; ctMode = false; win.setIgnoreMouseEvents(false);
+        win.setMinimumSize(320, 240);
+        if (clockPrev) win.setBounds(clockPrev);
+      }
       const p = PRESETS[arg && arg.preset];
       if (!p) break;
       if (fsState) { fsState = false; win.setFullScreen(false); }
@@ -117,43 +145,10 @@ ipcMain.on('win', (ev, cmd, arg) => {
       win.setBounds({ x, y, width: w, height: h });
       break;
     }
-    case 'overlay': {
-      // 仅时间悬浮钟：独立置顶小窗（毫秒时钟），支持点击穿透；位置/穿透状态存 tc-overlay.json
-      const action = (arg && arg.action) || 'toggle';
-      if (action === 'clickthrough') {
-        // 必须先于 toggle/show 判定：穿透切换只改状态，绝不能走销毁分支
-        if (ov) {
-          ovCt = !!arg.on;
-          ov.setIgnoreMouseEvents(ovCt, { forward: true });
-        }
-        break;
-      }
-      const want = action === 'toggle' ? !ov : action === 'show';
-      if (!want) {
-        if (ov) { saveOv(); try { ov.destroy(); } catch (_) {} }   // destroy 不触发 close，必须显式保存
-        ov = null;
-        break;
-      }
-      if (!ov) {
-        let b = null;
-        try { b = JSON.parse(fs.readFileSync(pathM.join(app.getPath('userData'), 'tc-overlay.json'), 'utf8')); } catch (_) {}
-        const wa = screen.getPrimaryDisplay().workArea;
-        const x = b && isFinite(b.x) ? b.x : wa.x + wa.width - 280;
-        const y = b && isFinite(b.y) ? b.y : wa.y + 60;
-        ov = new BrowserWindow({
-          x, y, width: 248, height: 76, frame: false, transparent: true, resizable: false,
-          alwaysOnTop: true, skipTaskbar: true, minimizable: false, maximizable: false,
-          backgroundColor: '#00000000', title: 'TIMECORE 悬浮钟',
-          webPreferences: { preload: pathM.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
-        });
-        ov.setAlwaysOnTop(true, 'screen-saver');
-        ovCt = !!(b && b.ct);
-        if (ovCt) ov.setIgnoreMouseEvents(true, { forward: true });
-        ov.on('close', saveOv);
-        ov.loadFile(pathM.join(__dirname, '..', 'index.html'), { search: 'overlay=1' });
-      } else {
-        ov.showInactive();
-      }
+    case 'clickthrough': {
+      // 仅时间形态的点击穿透（该形态下生效；退出形态时自动解除）
+      ctMode = !!(arg && arg.on);
+      if (clockMode) win.setIgnoreMouseEvents(ctMode, { forward: true });
       break;
     }
     case 'open': {
@@ -168,7 +163,7 @@ ipcMain.on('win', (ev, cmd, arg) => {
 
 ipcMain.handle('win:get', () => ({
   top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion(),
-  overlay: !!ov, overlayCt: ovCt
+  clock: clockMode, ct: ctMode
 }));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */

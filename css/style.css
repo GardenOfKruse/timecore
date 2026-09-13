@@ -462,34 +462,30 @@ body.compact .wl-btns button { padding: 7px 12px; font-size: 13px; }
 body.compact .wl-logo { font-size: 28px; }
 body.mini .wl-card p, body.mini .wl-note { display: none; }   /* 迷你窗口只留关键动作 */
 
-/* ---------- 仅时间悬浮钟（独立窗口 ?overlay=1） ---------- */
+/* ---------- 仅时间形态（同一窗口的钟面形态，Ctrl+1） ---------- */
 #ov-bar { display: none; }
-body.overlay {
-  background: transparent;
-  overflow: hidden;
-}
-body.overlay #scene, body.overlay #vignette, body.overlay #titlebar, body.overlay #welcome,
-body.overlay .cd-panel, body.overlay .ctrl-panel, body.overlay #drawer, body.overlay #adb-drawer,
-body.overlay #combo, body.overlay #judge-pop, body.overlay #zero-msg, body.overlay #toast,
-body.overlay #flash, body.overlay #shot-picker, body.overlay #about-pop { display: none !important; }
-body.overlay .clock-panel {
+body.clockmode { background: transparent; }
+body.clockmode #scene, body.clockmode #vignette, body.clockmode #titlebar, body.clockmode #welcome,
+body.clockmode .cd-panel, body.clockmode .ctrl-panel, body.clockmode #drawer, body.clockmode #adb-drawer,
+body.clockmode #combo, body.clockmode #judge-pop, body.clockmode #zero-msg, body.clockmode #toast,
+body.clockmode #flash, body.clockmode #shot-picker, body.clockmode #about-pop { display: none !important; }
+body.clockmode .clock-panel {
   position: fixed; inset: 0; padding: 10px 14px 8px;
   background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
   backdrop-filter: blur(12px); -webkit-app-region: drag;   /* 面板即拖拽区 */
 }
-body.overlay #clock-hms { font-size: 30px; }
-body.overlay #clock-ms { font-size: 14px; }
-body.overlay .row-sub { margin-top: 2px; gap: 8px; font-size: 11px; }
-body.overlay #tz-select { max-width: 88px; font-size: 10px; padding: 1px 4px; }
-body.overlay .badge { font-size: 10px; }
-body.overlay .badge .dot { width: 6px; height: 6px; }
+body.clockmode #clock-hms { font-size: 30px; }
+body.clockmode #clock-ms { font-size: 14px; }
+body.clockmode .row-sub { margin-top: 2px; gap: 8px; font-size: 11px; -webkit-app-region: no-drag; }
+body.clockmode #tz-select { max-width: 88px; font-size: 10px; padding: 1px 4px; }
+body.clockmode .badge { font-size: 10px; }
+body.clockmode .badge .dot { width: 6px; height: 6px; }
 #ov-bar button {
   background: rgba(255, 255, 255, 0.08); border: 1px solid var(--stroke); color: var(--txt);
   border-radius: 7px; padding: 1px 7px; font-size: 10px; cursor: pointer; -webkit-app-region: no-drag;
 }
 #ov-bar button:hover { background: rgba(120, 200, 255, 0.16); }
 #ov-bar button.on { color: var(--warm); border-color: rgba(255, 179, 71, 0.5); }
-body.overlay .row-sub { -webkit-app-region: no-drag; }   /* 行内控件（时区/穿透）可点 */
 
 /* ---------- 标题栏状态灯（校时 · ADB · 音频） ---------- */
 .tb-lights { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }

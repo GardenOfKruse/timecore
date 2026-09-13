@@ -75,51 +75,29 @@ for (const [preset, wmin, wmax, mini, compact] of [
 await js(`electronAPI.send('size', { preset: 'standard' })`);
 await sleep(600);
 
-// C: 悬浮钟窗口——打开/状态/穿透/关闭 + 位置记忆
-await js(`electronAPI.send('overlay', { action: 'toggle' })`);
-await waitJs(`electronAPI.get().then(st => st.overlay === true)`);
-await sleep(1200);   // 等悬浮窗加载
-const targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json();
-const ovPage = targets.find(t => t.url.includes('overlay=1'));
-check('悬浮钟窗口已创建', !!ovPage, (targets.map(t => t.url.split('/').pop())));
-let ovClock = null;
-if (ovPage) {
-  const oseq = { n: 0 };
-  const ows = new WebSocket(ovPage.webSocketDebuggerUrl);
-  await new Promise((res, rej) => { ows.onopen = res; ows.onerror = rej; });
-  ows.onmessage = ev => {
-    const m = JSON.parse(ev.data);
-    if (m.id && pending.has(m.id)) { pending.get(m.id).resolve(m.result); pending.delete(m.id); }
-  };
-  const ojs = expr => new Promise((resolve, reject) => {
-    const id = ++oseq.n;
-    pending.set(id, { resolve, reject });
-    ows.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }));
-    setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error('ov timeout')); } }, 8000);
-  }).then(r => r.result && r.result.value);
-  await sleep(700);
-  ovClock = await ojs(`(() => {
-    const cd = document.getElementById('clock-hms'), ms = document.getElementById('clock-ms');
-    return JSON.stringify({ bodyOv: document.body.classList.contains('overlay'),
-      hms: /\\d{2}:\\d{2}:\\d{2}/.test(cd ? cd.textContent : ''),
-      ms3: /^\\.\\d{3}$/.test(ms ? ms.textContent : ''),
-      hidden3d: getComputedStyle(document.getElementById('scene')).display === 'none' });
-  })()`);
-  const oc = JSON.parse(ovClock);
-  check('悬浮钟：时钟跳动毫秒 3 位', oc.hms && oc.ms3, oc);
-  check('悬浮钟：无 3D 场景', oc.hidden3d, oc);
-  // 穿透切换
-  await ojs(`document.getElementById('ov-ct').click()`);
-  await sleep(500);
-  const ct = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
-  check('悬浮钟：点击穿透可切换', ct.overlayCt === true, ct);
-  await ows.close();
-}
-await js(`electronAPI.send('overlay', { action: 'toggle' })`);
-await waitJs(`electronAPI.get().then(st => st.overlay === false)`);
-check('悬浮钟：可关闭', true);
-const ovFile = path.join(PROFILE, 'tc-overlay.json');
-check('悬浮钟：位置/穿透已持久化', existsSync(ovFile) && (() => { try { const j = JSON.parse(readFileSync(ovFile, 'utf8')); return j.ct === true && isFinite(j.x); } catch (_) { return false; } })(), existsSync(ovFile));
+// C: 仅时间形态——同一窗口变形（非独立窗口）：缩到钟面 + 只显示时钟 + 穿透 + 退出还原
+await js(`electronAPI.send('size', { preset: 'standard' })`);
+await sleep(600);
+const beforeW = await js(`innerWidth`);
+await js(`electronAPI.send('size', { preset: 'clock' })`);
+const cmOk = await waitJs(`innerWidth < 320 && document.body.classList.contains('clockmode')`);
+check('仅时间：窗口变形 + 形态类', cmOk, await js(`innerWidth + 'x' + innerHeight`));
+const cmUi = JSON.parse(await js(`(() => {
+  const cd = document.getElementById('clock-hms'), ms = document.getElementById('clock-ms');
+  return JSON.stringify({ hms: /\\d{2}:\\d{2}:\\d{2}/.test(cd ? cd.textContent : ''),
+    ms3: /^\\.\\d{3}$/.test(ms ? ms.textContent : ''),
+    hidden3d: getComputedStyle(document.getElementById('scene')).display === 'none',
+    hiddenCd: getComputedStyle(document.querySelector('.cd-panel')).display === 'none' });
+})()`));
+check('仅时间：时钟毫秒跳动、其余 UI 隐藏', cmUi.hms && cmUi.ms3 && cmUi.hidden3d && cmUi.hiddenCd, cmUi);
+await js(`document.getElementById('ov-ct').click()`);
+await sleep(400);
+const ct = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
+check('仅时间：点击穿透可切换', ct.ct === true && ct.clock === true, ct);
+await js(`electronAPI.send('size', { preset: 'clock' })`);   // 再按一次 = 退出形态
+const exOk = await waitJs(`innerWidth > 1000 && !document.body.classList.contains('clockmode')`);
+const exSt = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
+check('仅时间：退出还原原尺寸', exOk && exSt.clock === false && exSt.ct === false, { w: await js('innerWidth') });
 
 // B: 驻留期下一轮预告（10s 对齐 → 零点后 fired && hasNext；轮询预告文本本身）
 await js(`TC.Countdown.startAligned(10000, 3, false)`);

@@ -230,7 +230,26 @@
       });
       TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
       TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
-      TC.$('tb-overlay').addEventListener('click', () => window.electronAPI.send('overlay', { action: 'toggle' }));
+      TC.$('tb-overlay').addEventListener('click', toggleClockMode);
+      // 仅时间形态的小工具条：穿透切换 / 退出形态
+      const ovCtBtn = document.getElementById('ov-ct');
+      const syncCt = () => window.electronAPI.get().then(st => {
+        if (ovCtBtn) { ovCtBtn.textContent = st.ct ? '已穿透' : '穿透'; ovCtBtn.classList.toggle('on', !!st.ct); }
+      }).catch(() => {});
+      if (ovCtBtn) {
+        ovCtBtn.addEventListener('click', () => {
+          window.electronAPI.get().then(st => window.electronAPI.send('clickthrough', { on: !st.ct })).then(syncCt);
+        });
+        window.electronAPI.get().then(syncCt).catch(() => {});
+      }
+      const ovCloseBtn = document.getElementById('ov-close');
+      if (ovCloseBtn) ovCloseBtn.addEventListener('click', toggleClockMode);
+      // 形态状态同步：乐观切换 + 定期从主进程回读（覆盖直接 IPC / 边缘时序）
+      const syncClockMode = () => window.electronAPI.get().then(st => {
+        document.body.classList.toggle('clockmode', !!st.clock);
+      }).catch(() => {});
+      syncClockMode();
+      setInterval(syncClockMode, 800);
       window.electronAPI.get().then(st => {
         syncFullscreenBtn(st.fs);
         TC.$('tb-top').classList.toggle('active', st.top);
@@ -294,11 +313,12 @@
       else if (e.code === 'KeyM' && !e.repeat && !isTyping(e.target)) { TC.Audio.setMute(!TC.Audio.muted); el.mute.classList.toggle('active', TC.Audio.muted); }
       else if (e.ctrlKey && !e.repeat && /^Digit[0-9]$/.test(e.code) && window.electronAPI) {
         e.preventDefault();
-        const mode = { Digit1: '@overlay', Digit2: 'small', Digit3: 'phone', Digit4: 'narrow', Digit5: 'wide', Digit6: 'standard' }[e.code];
-        if (mode === '@overlay') window.electronAPI.send('overlay', { action: 'toggle' });
-        else window.electronAPI.send('size', { preset: mode });
+        if (e.code === 'Digit1') { toggleClockMode(); return; }
+        const mode = { Digit2: 'small', Digit3: 'phone', Digit4: 'narrow', Digit5: 'wide', Digit6: 'standard' }[e.code];
+        if (mode) window.electronAPI.send('size', { preset: mode });
       } else if (e.code === 'Escape') {
         if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
+        if (document.body.classList.contains('clockmode')) { toggleClockMode(); return; }   // 仅时间形态时 Esc 退出
         el.drawer.classList.remove('open');
         if (el.aboutPop) el.aboutPop.hidden = true;
       }
@@ -365,6 +385,14 @@
     el.compact.classList.toggle('active', w < 780);
   }
   window.addEventListener('resize', () => { clearTimeout(densTimer); densTimer = setTimeout(applyDensity, 120); });
+
+  /* 仅时间形态：同一窗口的钟面形态（Ctrl+1 / 标题栏 ◉ 切换；主进程记住原尺寸，退出即还原） */
+  function toggleClockMode() {
+    const on = !document.body.classList.contains('clockmode');
+    document.body.classList.toggle('clockmode', on);
+    if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
+    toast(on ? '仅时间形态：Ctrl+1 退出 · 面板可拖动 · 「穿透」可让鼠标穿过' : '已退出仅时间形态');
+  }
 
   // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用
   function syncRunState() {

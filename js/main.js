@@ -49,25 +49,6 @@
     'tc.opacity', 'tc.compact', 'tc.zerofx', 'tc.xparent', 'tc.adb.v1', 'tc.freerun', 'tc.welcomed'];
 
   function boot() {
-    // 悬浮钟窗口（?overlay=1）：只跑时钟，跳过 3D/UI/ADB/节拍器与 rAF 大循环
-    if (/[?&]overlay=1/.test(location.search)) {
-      document.body.classList.add('overlay');
-      TC.bus.emit('boot');   // clock.js 借此抓取时钟元素
-      setInterval(() => { TC.time.tick(); TC.Clock.render(TC.time.epoch()); }, 33);
-      TC.time.sync();
-      if (window.electronAPI) {
-        const syncCt = () => window.electronAPI.get().then(st => {
-          const b = document.getElementById('ov-ct');
-          if (b) { b.textContent = st.overlayCt ? '已穿透' : '穿透'; b.classList.toggle('on', !!st.overlayCt); }
-        }).catch(() => {});
-        syncCt();
-        document.getElementById('ov-ct').addEventListener('click', () => {
-          window.electronAPI.get().then(st => { window.electronAPI.send('overlay', { action: 'clickthrough', on: !st.overlayCt }); setTimeout(syncCt, 150); });
-        });
-        document.getElementById('ov-close').addEventListener('click', () => window.electronAPI.send('overlay', { action: 'hide' }));
-      }
-      return;
-    }
     TC.fresh = !localStorage.getItem('tc.welcomed') && !PREF_KEYS.some(k => localStorage.getItem(k) != null);
     TC.Scene.init(document.getElementById('scene'));
     TC.UI.init();
