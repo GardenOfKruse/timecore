@@ -24,6 +24,20 @@ const PRESETS = {
 };
 let clockMode = false;       // 仅时间形态中
 let clockPrev = null;        // 进入仅时间前的 bounds（退出时还原）
+let moveTimer = null;        // 手动拖窗（钟面）：钟面禁用 app-region:drag，移动走增量 setPosition
+let moveStart = null;
+
+function beginMove() {
+  if (!win) return;
+  moveStart = { c: screen.getCursorScreenPoint(), b: win.getBounds() };
+  clearInterval(moveTimer);
+  moveTimer = setInterval(() => {
+    if (!win || win.isDestroyed()) { endMove(); return; }
+    const c = screen.getCursorScreenPoint();
+    win.setPosition(moveStart.b.x + c.x - moveStart.c.x, moveStart.b.y + c.y - moveStart.c.y);
+  }, 16);
+}
+function endMove() { clearInterval(moveTimer); moveTimer = null; }
 
 function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
 
@@ -163,6 +177,8 @@ ipcMain.on('win', (ev, cmd, arg) => {
     case 'minimize': win.minimize(); break;
     case 'fullscreen': toggleFs(); break;
     case 'size': doSize(arg); break;
+    case 'move-begin': beginMove(); break;
+    case 'move-end': endMove(); break;
     case 'clickthrough': {
       // 仅时间形态的点击穿透（该形态下生效；退出形态时自动解除）
       ctMode = !!(arg && arg.on);

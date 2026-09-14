@@ -231,11 +231,27 @@
       TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
       TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
       TC.$('tb-overlay').addEventListener('click', toggleClockMode);
-      // 钟面形态：药丸「✕ 还原」+ 双击时间区退出 + 首次 3.5s 操作提示
+      // 钟面形态：药丸「✕ 还原」+ 双击面板任意处退出 + 手动拖窗（无 app-region，真实鼠标事件全可用）+ 首次提示
       const faceExit = document.getElementById('face-exit');
       if (faceExit) faceExit.addEventListener('click', toggleClockMode);
-      document.querySelector('.clock-panel .row-main').addEventListener('dblclick', () => {
-        if (document.body.classList.contains('clockmode')) toggleClockMode();
+      const cpanel = document.querySelector('.clock-panel');
+      let dragMoved = false, dsx = 0, dsy = 0;
+      cpanel.addEventListener('mousedown', e => {
+        if (e.button !== 0 || !document.body.classList.contains('clockmode')) return;
+        if (e.target.closest('button, select, input')) return;   // 控件不触发拖动
+        dsx = e.clientX; dsy = e.clientY; dragMoved = false;
+        window.electronAPI.send('move-begin');
+        const mv = ev => { if (Math.hypot(ev.clientX - dsx, ev.clientY - dsy) > 4) dragMoved = true; };
+        const up = () => {
+          window.electronAPI.send('move-end');
+          window.removeEventListener('mouseup', up);
+          window.removeEventListener('mousemove', mv);
+        };
+        window.addEventListener('mousemove', mv);
+        window.addEventListener('mouseup', up);
+      });
+      cpanel.addEventListener('dblclick', () => {
+        if (document.body.classList.contains('clockmode') && !dragMoved) toggleClockMode();
       });
       let hintShown = false;
       const faceHint = document.getElementById('face-hint');

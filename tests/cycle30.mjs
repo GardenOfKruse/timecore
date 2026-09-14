@@ -94,7 +94,7 @@ check('仅时间：字号 vw 等比（280 宽→约35px）', cmUi.hmsPx > 30 && 
 check('仅时间：悬停药丸存在（✕ 还原）', await js(`!!document.getElementById('face-exit')`), null);
 
 // 双击时间区 = 退出形态（拖拽垫层不再吃事件）
-await js(`document.querySelector('.clock-panel .row-main').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
+await js(`document.querySelector('.clock-panel').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
 const exOk = await waitJs(`innerWidth > 1000 && !document.body.classList.contains('clockmode')`);
 const exSt = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
 check('仅时间：双击退出并还原原尺寸', exOk && exSt.clock === false && exSt.ct === false, { w: await js('innerWidth') });

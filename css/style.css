@@ -473,13 +473,11 @@ body.clockmode .clock-panel {
   max-width: none; max-height: none;   /* 解除移动端媒体查询的 max 约束（280px 下会压成 108px） */
   display: flex; align-items: center; justify-content: center;
   background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px); cursor: default;
 }
-/* 拖拽垫层：铺满面板、位于内容之下——空白处可拖动窗口，中央时间区恢复完整鼠标事件（双击退出等） */
-body.clockmode .clock-panel::before {
-  content: ""; position: absolute; inset: 0; -webkit-app-region: drag;
-}
-body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line-height: 1; cursor: default; }
+/* 注意：钟面禁用一切 -webkit-app-region:drag——它会按几何矩形截留整窗鼠标事件
+ * （双击/右键全部失效，右键还会弹系统菜单）。移动窗口走手动拖窗（move-begin/move-end IPC）。 */
+body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line-height: 1; }
 body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
 body.clockmode #clock-ms { font-size: 6.3vw; }
 body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一律不显示 */
@@ -495,7 +493,7 @@ body.clockmode .clock-panel:hover .face-pill { opacity: 1; }
   font-size: 11px; padding: 3px 9px; border-radius: 999px;
   background: rgba(8, 13, 24, 0.85); border: 1px solid var(--stroke); color: var(--txt);
 }
-.face-pill .grip { -webkit-app-region: drag; cursor: move; letter-spacing: .2em; }
+.face-pill .grip { cursor: move; letter-spacing: .2em; }
 .face-pill button { cursor: pointer; }
 .face-pill button:hover { color: #d9f6ff; border-color: rgba(57, 215, 255, 0.5); }
 
