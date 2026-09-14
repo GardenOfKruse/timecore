@@ -74,13 +74,24 @@ for (const [preset, wmin, wmax, mini, compact] of [
 await js(`electronAPI.send('size', { preset: 'standard' })`);
 await sleep(600);
 
-// C: 仅时间形态——同一窗口变形（非独立窗口）：缩到钟面 + 只显示时钟 + 穿透 + 退出还原
+// C: 仅时间形态——同一窗口变形（非独立窗口）：缩到钟面 + 只显示时钟 + 退出还原
 await js(`electronAPI.send('size', { preset: 'standard' })`);
 await sleep(600);
 const beforeW = await js(`innerWidth`);
 await js(`electronAPI.send('size', { preset: 'clock' })`);
 const cmOk = await waitJs(`innerWidth < 320 && document.body.classList.contains('clockmode')`);
 check('仅时间：窗口变形 + 形态类', cmOk, await js(`innerWidth + 'x' + innerHeight`));
+await js(`electronAPI.send('clock-zoom', -1)`);
+const zoomIn = await waitJs(`innerWidth > 300 && innerWidth < 340`);
+check('仅时间：滚轮放大', zoomIn, await js(`innerWidth`));
+await js(`Array.from({length: 20}, () => electronAPI.send('clock-zoom', 1))`);
+const minZoom = await waitJs(`innerWidth === 160`);
+const minW = await js(`innerWidth`);
+await js(`electronAPI.send('clock-zoom', 1)`);
+await sleep(200);
+check('仅时间：滚轮缩小到边界后不漂移', minZoom && await js(`innerWidth`) === minW, { w: minW });
+await js(`Array.from({length: 6}, () => electronAPI.send('clock-zoom', -1))`);
+await waitJs(`innerWidth >= 280 && innerWidth <= 290`);
 const cmUi = JSON.parse(await js(`(() => {
   const cd = document.getElementById('clock-hms'), ms = document.getElementById('clock-ms');
   return JSON.stringify({ hms: /\\d{2}:\\d{2}:\\d{2}/.test(cd ? cd.textContent : ''),
@@ -91,15 +102,15 @@ const cmUi = JSON.parse(await js(`(() => {
 })()`));
 check('仅时间：时钟毫秒跳动、其余 UI 隐藏', cmUi.hms && cmUi.ms3 && cmUi.hidden3d && cmUi.hiddenCd, cmUi);
 check('仅时间：字号 vw 等比（280 宽→约35px）', cmUi.hmsPx > 30 && cmUi.hmsPx < 40, cmUi.hmsPx);
-check('仅时间：悬停药丸存在（✕ 还原）', await js(`!!document.getElementById('face-exit')`), null);
+check('仅时间：不叠加悬停按钮', await js(`!document.getElementById('face-exit') && !document.querySelector('.face-pill')`), null);
 
 // 双击时间区 = 退出形态（拖拽垫层不再吃事件）
 await js(`document.querySelector('.clock-panel').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
 const exOk = await waitJs(`innerWidth > 1000 && !document.body.classList.contains('clockmode')`);
 const exSt = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
-check('仅时间：双击退出并还原原尺寸', exOk && exSt.clock === false && exSt.ct === false, { w: await js('innerWidth') });
+check('仅时间：双击退出并还原原尺寸', exOk && exSt.clock === false, { w: await js('innerWidth') });
 
-// 重新进入（供后续截图/穿透语义保留验证：穿透只经右键菜单，UI 无入口）
+// 重新进入并退出，确认形态开关可重复使用
 await js(`electronAPI.send('size', { preset: 'clock' })`);
 await waitJs(`document.body.classList.contains('clockmode')`);
 await js(`electronAPI.send('size', { preset: 'clock' })`);   // 退出还原
@@ -118,6 +129,11 @@ await waitJs(`TC.Audio.info().state === 'running'`);
 const info0 = JSON.parse(await js(`JSON.stringify(TC.Audio.info())`));
 check('音频 Worker 唤醒已建立', info0.worker === true, info0.worker);
 check('全程节拍默认开', info0.metroFull === true);
+await js(`TC.Audio.setTick(false); TC.Beats.toggleFreerun(true)`);
+await sleep(1200);
+const free0 = JSON.parse(await js(`JSON.stringify(TC.Audio.info())`));
+check('无倒计时且关闭提示音时，自由节拍仍排音', free0.scheduled > 0, free0);
+await js(`TC.Audio.setTick(true)`);
 await js(`TC.Countdown.startSingle(TC.time.epoch() + 12000)`);   // 12s 单次：留出批量空间
 await js(`TC.Audio.debugSched(13000)`);                          // 以 13s 预排窗口跑一次调度器（模拟后台批量路径）
 const info1 = JSON.parse(await js(`JSON.stringify(TC.Audio.info())`));

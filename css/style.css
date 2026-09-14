@@ -472,8 +472,9 @@ body.clockmode .clock-panel {
   position: fixed; inset: 0; padding: 0;
   max-width: none; max-height: none;   /* 解除移动端媒体查询的 max 约束（280px 下会压成 108px） */
   display: flex; align-items: center; justify-content: center;
-  background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
-  backdrop-filter: blur(12px); cursor: default;
+  /* 钟面是轻薄仪表面，不复用普通面板的厚阴影/大圆角 */
+  background: rgba(9, 15, 27, 0.48); border: 1px solid rgba(190, 225, 255, 0.22); border-radius: 7px;
+  box-shadow: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); cursor: default;
 }
 /* 注意：钟面禁用一切 -webkit-app-region:drag——它会按几何矩形截留整窗鼠标事件
  * （双击/右键全部失效，右键还会弹系统菜单）。移动窗口走手动拖窗（move-begin/move-end IPC）。 */
@@ -481,21 +482,6 @@ body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line
 body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
 body.clockmode #clock-ms { font-size: 6.3vw; }
 body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一律不显示 */
-
-/* 悬停浮现操作药丸：⠿ 拖动 + ✕ 还原（静止时纯显示） */
-.face-pill {
-  position: absolute; top: 6px; right: 8px; z-index: 3;
-  display: none; gap: 5px; opacity: 0; transition: opacity .25s;
-}
-body.clockmode .face-pill { display: flex; }
-body.clockmode .clock-panel:hover .face-pill { opacity: 1; }
-.face-pill .grip, .face-pill button {
-  font-size: 11px; padding: 3px 9px; border-radius: 999px;
-  background: rgba(8, 13, 24, 0.85); border: 1px solid var(--stroke); color: var(--txt);
-}
-.face-pill .grip { cursor: move; letter-spacing: .2em; }
-.face-pill button { cursor: pointer; }
-.face-pill button:hover { color: #d9f6ff; border-color: rgba(57, 215, 255, 0.5); }
 
 /* 首次进入操作提示（3.5s 自动消失，之后记住不再显示） */
 #face-hint {

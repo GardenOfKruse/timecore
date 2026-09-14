@@ -231,9 +231,7 @@
       TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
       TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
       TC.$('tb-overlay').addEventListener('click', toggleClockMode);
-      // 钟面形态：药丸「✕ 还原」+ 双击面板任意处退出 + 手动拖窗（无 app-region，真实鼠标事件全可用）+ 首次提示
-      const faceExit = document.getElementById('face-exit');
-      if (faceExit) faceExit.addEventListener('click', toggleClockMode);
+      // 钟面形态：双击面板任意处退出 + 手动拖窗（无 app-region，真实鼠标事件全可用）+ 首次提示
       const cpanel = document.querySelector('.clock-panel');
       let dragMoved = false, dsx = 0, dsy = 0;
       cpanel.addEventListener('mousedown', e => {
@@ -253,6 +251,11 @@
       cpanel.addEventListener('dblclick', () => {
         if (document.body.classList.contains('clockmode') && !dragMoved) toggleClockMode();
       });
+      cpanel.addEventListener('wheel', e => {
+        if (!document.body.classList.contains('clockmode') || !window.electronAPI) return;
+        e.preventDefault();
+        window.electronAPI.send('clock-zoom', e.deltaY);
+      }, { passive: false });
       let hintShown = false;
       const faceHint = document.getElementById('face-hint');
       TC.bus.on('clockmode', on => {

@@ -151,9 +151,9 @@
     if (cd.armed && !cd.fired) {
       // 隐藏时一次排完整个软节拍窗口（+3s 余量）；可见时贴近实时即可
       scheduleCd(e, document.hidden ? (softLead + 3) * 1000 : 220);
-    } else if (TC.Beats.stats().freerun && tickOn) {
+    } else if (TC.Beats.stats().freerun) {
       // 自由节拍器：与倒计时提示音同款可闻音量（此前是近乎听不见的极轻正弦）；
-      // 倒计时进行中走上面分支不叠加，避免同一秒双音（全程节拍由 scheduleCd 内处理）
+      // 不受「倒计时提示音」开关影响；倒计时进行中走上面分支不叠加，避免同一秒双音
       const next = Math.ceil((e + 180) / 1000) * 1000;
       const key = 'fr' + next;
       if (!scheduled.has(key)) { scheduled.add(key); S.tick(tFor(next)); }

@@ -8,7 +8,6 @@ const pathM = require('path');
 if (process.env.TC_TMP_PROFILE) app.setPath('userData', process.env.TC_TMP_PROFILE);
 
 let win = null;
-let ctMode = false;          // 仅时间形态下的点击穿透
 let fsState = false;       // 显式全屏状态：透明窗口上 isFullScreen() 会误报，不能信任
 let prevBounds = null;
 
@@ -113,7 +112,7 @@ function toggleFs() {
   }
 }
 function exitClock() {
-  clockMode = false; ctMode = false;
+  clockMode = false;
   win.setIgnoreMouseEvents(false);
   win.setMinimumSize(320, 240);
   if (clockPrev) win.setBounds(clockPrev);
@@ -128,7 +127,6 @@ function doSize(arg) {
     if (fsState) { fsState = false; win.setFullScreen(false); }
     win.setMinimumSize(120, 60);
     applyPreset(PRESETS.clock);
-    if (ctMode) win.setIgnoreMouseEvents(true, { forward: true });
     return;
   }
   // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
@@ -146,16 +144,27 @@ function applyPreset(p) {
   const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
   win.setBounds({ x, y, width: w, height: h });
 }
+function zoomClock(delta) {
+  if (!win || !clockMode) return;
+  const b = win.getBounds();
+  const ratio = PRESETS.clock[0] / PRESETS.clock[1];
+  const minW = 160, maxW = 1180;
+  const nextW = delta < 0 ? b.width * 1.1 : b.width / 1.1;
+  const w = Math.round(Math.max(minW, Math.min(maxW, nextW)));
+  if (w === b.width) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
+  const h = Math.round(w / ratio);
+  const wa = screen.getDisplayMatching(b).workArea;
+  // 先锁定当前窗口中心，再以中心生成新 bounds；只有屏幕边缘才做必要钳制。
+  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
+  win.setBounds({ x: Math.max(wa.x, Math.min(x, wa.x + wa.width - w)), y: Math.max(wa.y, Math.min(y, wa.y + wa.height - h)), width: w, height: h });
+}
 
 /* 右键菜单：全形态可用（钟面形态的尺寸/退出主入口——拖拽区不向页面投递鼠标事件，页内按钮收不到） */
 function showContextMenu() {
   if (!win) return;
   const menu = Menu.buildFromTemplate([
     { label: '还原窗口（退出仅时间）', visible: clockMode, click: () => doSize({ preset: 'clock' }) },
-    {
-      label: ctMode ? '关闭点击穿透' : '点击穿透（鼠标穿过窗口）', visible: clockMode,
-      click: () => { ctMode = !ctMode; if (clockMode) win.setIgnoreMouseEvents(ctMode, { forward: true }); }
-    },
     { type: 'separator', visible: clockMode },
     { label: '正常 1180×760', click: () => doSize({ preset: 'standard' }) },
     { label: '小窗 480×320', click: () => doSize({ preset: 'small' }) },
@@ -179,12 +188,7 @@ ipcMain.on('win', (ev, cmd, arg) => {
     case 'size': doSize(arg); break;
     case 'move-begin': beginMove(); break;
     case 'move-end': endMove(); break;
-    case 'clickthrough': {
-      // 仅时间形态的点击穿透（该形态下生效；退出形态时自动解除）
-      ctMode = !!(arg && arg.on);
-      if (clockMode) win.setIgnoreMouseEvents(ctMode, { forward: true });
-      break;
-    }
+    case 'clock-zoom': zoomClock(Number(arg) || 0); break;
     case 'open': {
       // 仅允许打开本项目的 GitHub 页面（更新/Releases 跳转）
       const url = String(arg || '');
@@ -197,7 +201,7 @@ ipcMain.on('win', (ev, cmd, arg) => {
 
 ipcMain.handle('win:get', () => ({
   top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion(),
-  clock: clockMode, ct: ctMode
+  clock: clockMode
 }));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */
@@ -307,6 +311,8 @@ ipcMain.handle('adb:detect', async (e, payload) => {
   return fallback || { ok: false };
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+});
 app.on('window-all-closed', () => app.quit());
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

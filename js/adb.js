@@ -282,11 +282,12 @@
     let skipped = 0;
     for (const a of enabledActions()) {
       for (const d of targetsOf(a)) {
-        const fireAt = node - wakeFor(a, d);
+        const triggerNode = node + (isFinite(+a.offsetMs) ? +a.offsetMs : 0);
+        const fireAt = triggerNode - wakeFor(a, d);
         if (fireAt <= now + 30) { skipped++; continue; }   // 已过节点不补发
         // 预发射模式提前 PRESPAWN_MS 拉起进程；发射窗口内发生的重排会立即拉起——靠 fireOne 去重防双发
         const spawnAt = cfg.precise ? Math.max(now + 40, fireAt - PRESPAWN_MS) : Math.max(now + 40, fireAt);
-        timers.push(setTimeout(() => fireOne(a, d, node), spawnAt - now));
+        timers.push(setTimeout(() => fireOne(a, d, triggerNode), spawnAt - now));
         plannedN++;
       }
     }
@@ -301,7 +302,7 @@
     const key = a.id + ':' + d.serial + ':' + node;
     if (spawnedKeys.has(key)) return;
     spawnedKeys.add(key);
-    if (cfg.precise) spawnPrecise(a, d, lastArmNode - wakeFor(a, d)); else spawnSimple(a, d);
+    if (cfg.precise) spawnPrecise(a, d, node - wakeFor(a, d)); else spawnSimple(a, d);
   }
 
   function spawnSimple(a, d) {
@@ -616,6 +617,7 @@
       body +
       '<div class="a-devices">' + chipsHTML(a) + '</div>' +
       '<div class="a-field"><span class="a-lab">提前量</span><input type="number" class="a-lead" placeholder="用全局"><span class="dim small">ms</span></div>' +
+      '<div class="a-field"><span class="a-lab">节点偏移</span><input type="number" class="a-offset" placeholder="0"><span class="dim small">ms（T+）</span></div>' +
       '<div class="row"><span class="dim small a-devcount">' + (a.devs.length ? '指定 ' + a.devs.length + ' 台' : '全部启用设备') + '</span>' +
       '<span style="flex:1"></span><button class="a-fire">试射</button></div>';
 
@@ -625,6 +627,8 @@
     card.querySelector('.a-fire').addEventListener('click', () => testFire(a));
     card.querySelector('.a-lead').value = a.lead != null ? a.lead : '';
     card.querySelector('.a-lead').addEventListener('input', e => { a.lead = e.target.value === '' ? '' : +e.target.value; save(); });
+    card.querySelector('.a-offset').value = isFinite(+a.offsetMs) ? a.offsetMs : 0;
+    card.querySelector('.a-offset').addEventListener('input', e => { a.offsetMs = e.target.value === '' ? 0 : Math.max(0, +e.target.value || 0); save(); });
     bindChips(card.querySelector('.a-devices'), a);
 
     if (isAdv) {

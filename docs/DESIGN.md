@@ -1,7 +1,7 @@
 # TIMECORE 产品设计文档
 
 > 悬浮式三维时间核心 · Windows 桌面时间装置
-> 仓库：GardenOfKruse/timecore · 当前版本：v1.2.3 · 文档基准：2026-09-14
+> 仓库：GardenOfKruse/timecore · 当前版本：v1.2.4 · 文档基准：2026-09-14
 > 循环开发守则见 `docs/PROGRESS.md`（每次循环先读它 + git status，结束必须回写）
 
 ---
@@ -33,7 +33,7 @@
 
 ### 2.3 击拍
 - 空格 / 左键（星球）触发；PERFECT ≤60ms / GREAT ≤140 / GOOD ≤300 / MISS；combo、准确率、颜色分级。
-- 自由节拍器（B 键）：整秒格对齐；倒计时进行中让位给倒计时提示音；「倒计时全程节拍」开关默认开（tc.metrofull）——节拍器开启时倒计时全程每秒提示，软节拍窗口外由 scheduleCd 内补齐。
+- 自由节拍器（B 键）：整秒格对齐；无倒计时也独立发声，不受倒计时提示音开关影响；倒计时进行中让位给倒计时提示音；「倒计时全程节拍」开关默认开（tc.metrofull）——节拍器开启时倒计时全程每秒提示，软节拍窗口外由 scheduleCd 内补齐。
 - 击拍音走 hit 分轨；提示音走 beat 分轨（提示音量滑杆控制）。
 
 ### 2.4 音频（js/audio.js，全合成无素材）
@@ -58,9 +58,9 @@
 ### 2.6 仅时间形态（钟面）——交互定稿 v1.2.3
 - **显示**：只有 时:分:秒.毫秒 一行，字号 **12.6vw / 6.3vw**（随窗口拉伸等比缩放）；其余 UI 全部隐藏。
 - **退出**：双击任意处（主出口） / 右键菜单「还原窗口」 / Ctrl+1 / Esc。退出还原进入前尺寸（clockPrev）。
-- **移动**：按住面板拖动 = 手动增量拖窗（渲染端 mousedown→move-begin，主进程 16ms 轮询 getCursorScreenPoint 增量 setPosition，mouseup→move-end）；>4px 位移标记 dragMoved 抑制双击误触。
-- **悬停药丸**：右上角浮现 [⠿ 拖动] [✕ 还原]，静止时纯显示。
-- **右键菜单**（原生 Menu.popup，webContents context-menu 触发）：还原窗口 / 点击穿透开关（仅钟面态）/ 分隔 / 三形态 / 分隔 / 全屏 / 置顶 / 分隔 / 关闭。
+- **移动/缩放**：按住面板拖动 = 手动增量拖窗；鼠标滚轮围绕窗口中心等比缩放（160–1180px 宽），>4px 位移标记 dragMoved 抑制双击误触。
+- **交互提示**：不在时间内容上叠加按钮；双击面板退出，右键菜单管理窗口。
+- **右键菜单**（原生 Menu.popup，webContents context-menu 触发）：还原窗口 / 分隔 / 三形态 / 分隔 / 全屏 / 置顶 / 分隔 / 关闭。
 - **首次提示**：进入时显示 3.5s「双击退出 · 右键更多 · 拖动面板移动」（tc.hint.clock 持久化，仅一次）。
 - **形态状态同步**：渲染端乐观切 class + 800ms 从 win:get 回读（覆盖直接 IPC 路径）。
 
@@ -71,6 +71,7 @@
 
 ### 2.8 ADB 齐射（js/adb.js，仅 Windows）
 - **时序链**：点击时刻 = 节点 − 提前量(默认 100ms) − 传输延迟(echo×3 中位, 60s 新鲜度)；预发射模式提前 1.8s 拉起 adb、设备端 sleep 对齐。
+- **时间轴编排**：每个动作可设节点偏移 `T+N ms`（默认 0）；同一倒计时节点按各动作偏移依次触发，仍复用提前量、延迟校准、预发射与节点去重。
 - **间隔补偿**（cfg.comp 默认开）：probe 实测 input 命令开销 TI（无参 usage 调用×3 中位 − echo RTT），生成脚本 sleep = gap − TI（下限 50ms，无 TI 不补偿）——「间隔」≈ 真实点击间隔。
 - **发射去重**（双发 BUG 修复）：fireOne 闸门，键 = 动作id×设备serial×**倒计时节点**（不能用 fireAt——延迟重测会改它）；同节点重排不补发，新节点放行；cd:stop/done/停用 → haltAll 清记录。
 - **扫描纪律**：无变化不 save()（save 触发重排）；n=1 脚本为裸 `input tap`（无循环无尾巴）。
@@ -92,7 +93,7 @@
 
 - **零框架**：vanilla JS 模块 IIFE + TC 命名空间（core/time-sync/clock/countdown/beats/audio/scene3d/ui/adb/main），three.js 仅 3D。
 - **双驱动循环**：rAF 只渲染 3D；逻辑与 DOM 由 66ms setInterval + 120ms 看门狗驱动（后台/隐藏不冻结）。
-- **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clickthrough/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock,ct}；adb:detect|exec|download。
+- **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；adb:detect|exec|download。
 - **窗口命令函数化**：doSize/toggleFs/toggleTop 供 IPC 与右键菜单共用。
 - 悬浮钟曾是独立 BrowserWindow（v1.2.1 前），v1.2.2 起按用户要求改为同窗口形态，?overlay=1 分支已删。
 
@@ -123,4 +124,3 @@
 - 每日击拍统计面板
 - 局域网伴侣页（手机看倒计时）
 - 音效主题包（绑定 3D 主题）
-- 钟面穿透的更优交互（当前仅右键菜单，开启后 UI 自锁是已知权衡）
