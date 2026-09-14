@@ -13,13 +13,10 @@ let fsState = false;       // 显式全屏状态：透明窗口上 isFullScreen(
 let prevBounds = null;
 
 /* 窗口尺寸预设与位置记忆：bounds 存 userData/tc-window.json
- * 六模式同一窗口不同形态：全屏(F) / 标准 / 宽屏 / 窄屏 / 手机屏 / 小窗 / 仅时间(clock：缩到钟面+只显示时钟)；
+ * 四形态同一窗口：正常(standard) / 小窗(small) / 仅时间(clock：缩到钟面+只显示时钟) / 全屏(F)
  * mini/compact 为旧版兼容别名 */
 const PRESETS = {
-  standard: [1180, 760],   // 标准
-  wide: [1280, 720],       // 宽屏（16:9）
-  narrow: [560, 760],      // 窄屏
-  phone: [380, 720],       // 手机屏（竖长）
+  standard: [1180, 760],   // 正常
   small: [480, 320],       // 小窗
   clock: [280, 96],        // 仅时间
   compact: [660, 460],     // 旧版兼容
@@ -140,12 +137,9 @@ function applyPreset(p) {
 function showContextMenu() {
   if (!win) return;
   const menu = Menu.buildFromTemplate([
-    { label: '退出仅时间', visible: clockMode, click: () => doSize({ preset: 'clock' }) },
+    { label: '还原窗口（退出仅时间）', visible: clockMode, click: () => doSize({ preset: 'clock' }) },
     { type: 'separator', visible: clockMode },
-    { label: '标准 1180×760', click: () => doSize({ preset: 'standard' }) },
-    { label: '宽屏 1280×720', click: () => doSize({ preset: 'wide' }) },
-    { label: '窄屏 560×760', click: () => doSize({ preset: 'narrow' }) },
-    { label: '手机屏 380×720', click: () => doSize({ preset: 'phone' }) },
+    { label: '正常 1180×760', click: () => doSize({ preset: 'standard' }) },
     { label: '小窗 480×320', click: () => doSize({ preset: 'small' }) },
     { label: '仅时间 280×96', click: () => doSize({ preset: 'clock' }) },
     { type: 'separator' },

@@ -66,8 +66,7 @@ check('ADB 默认提前量 100', (await js(`TC.ADB.debug().cfg.leadMs`)) === 100
 
 // D: 六模式——尺寸预设与密度
 for (const [preset, wmin, wmax, mini, compact] of [
-  ['small', 470, 490, false, true], ['phone', 370, 390, true, true],
-  ['narrow', 550, 570, false, true], ['wide', 1270, 1290, false, false], ['standard', 1170, 1190, false, false]]) {
+  ['small', 470, 490, false, true], ['standard', 1170, 1190, false, false]]) {
   await js(`electronAPI.send('size', { preset: '${preset}' })`);
   const ok = await waitJs(`innerWidth >= ${wmin} && innerWidth <= ${wmax} && document.body.classList.contains('mini') === ${mini} && document.body.classList.contains('compact') === ${compact}`);
   check(`尺寸 ${preset} + 密度`, ok, await js(`innerWidth`));

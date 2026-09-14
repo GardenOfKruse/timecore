@@ -315,11 +315,10 @@
       } else if (e.code === 'KeyF' && !e.repeat && !isTyping(e.target)) toggleFullscreen();
       else if (e.code === 'KeyC' && !e.repeat && !isTyping(e.target)) toggleCompact();
       else if (e.code === 'KeyM' && !e.repeat && !isTyping(e.target)) { TC.Audio.setMute(!TC.Audio.muted); el.mute.classList.toggle('active', TC.Audio.muted); }
-      else if (e.ctrlKey && !e.repeat && /^Digit[0-9]$/.test(e.code) && window.electronAPI) {
+      else if (e.ctrlKey && !e.repeat && /^Digit[1-3]$/.test(e.code) && window.electronAPI) {
         e.preventDefault();
         if (e.code === 'Digit1') { toggleClockMode(); return; }
-        const mode = { Digit2: 'small', Digit3: 'phone', Digit4: 'narrow', Digit5: 'wide', Digit6: 'standard' }[e.code];
-        if (mode) window.electronAPI.send('size', { preset: mode });
+        window.electronAPI.send('size', { preset: e.code === 'Digit2' ? 'small' : 'standard' });
       } else if (e.code === 'Escape') {
         if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
         if (document.body.classList.contains('clockmode')) { toggleClockMode(); return; }   // 仅时间形态时 Esc 退出
@@ -363,11 +362,11 @@
     }, 1500);
   }
 
-  /* 尺寸预设：桌面端在 标准→宽屏→窄屏→手机屏→小窗 间循环（真实缩放窗口，密度类随宽度自适应）；
-   * 「仅时间」是独立悬浮钟窗口（Ctrl+1），不在此循环内。浏览器模式退化为 CSS 密度开关 */
-  const SIZE_ORDER = ['standard', 'wide', 'narrow', 'phone', 'small'];
+  /* 尺寸形态：正常 ⇄ 小窗（C 键循环，Ctrl+2/3 直达）；仅时间走 Ctrl+1；全屏 F。
+   * 浏览器模式退化为 CSS 密度开关 */
+  const SIZE_ORDER = ['standard', 'small'];
   function currentSize() {
-    return innerWidth < 450 ? 'small' : innerWidth < 500 ? 'phone' : innerWidth < 780 ? 'narrow' : innerWidth < 1240 ? 'standard' : 'wide';
+    return innerWidth < 640 ? 'small' : 'standard';
   }
   function toggleCompact() {
     if (window.electronAPI) {
