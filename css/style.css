@@ -463,23 +463,48 @@ body.compact .wl-logo { font-size: 28px; }
 body.mini .wl-card p, body.mini .wl-note { display: none; }   /* 迷你窗口只留关键动作 */
 
 /* ---------- 仅时间形态（同一窗口的钟面形态，Ctrl+1） ---------- */
-#ov-bar { display: none; }
 body.clockmode { background: transparent; }
 body.clockmode #scene, body.clockmode #vignette, body.clockmode #titlebar, body.clockmode #welcome,
 body.clockmode .cd-panel, body.clockmode .ctrl-panel, body.clockmode #drawer, body.clockmode #adb-drawer,
 body.clockmode #combo, body.clockmode #judge-pop, body.clockmode #zero-msg, body.clockmode #toast,
 body.clockmode #flash, body.clockmode #shot-picker, body.clockmode #about-pop { display: none !important; }
 body.clockmode .clock-panel {
-  position: fixed; inset: 0; padding: 6px 12px;
+  position: fixed; inset: 0; padding: 0;
   max-width: none; max-height: none;   /* 解除移动端媒体查询的 max 约束（280px 下会压成 108px） */
   display: flex; align-items: center; justify-content: center;
   background: rgba(9, 15, 27, 0.62); border: 1px solid var(--stroke); border-radius: 14px;
-  backdrop-filter: blur(12px); -webkit-app-region: drag;   /* 面板即拖拽区 */
+  backdrop-filter: blur(12px);
 }
-body.clockmode .row-main { flex-wrap: nowrap; gap: 1px; line-height: 1; }
+/* 拖拽垫层：铺满面板、位于内容之下——空白处可拖动窗口，中央时间区恢复完整鼠标事件（双击退出等） */
+body.clockmode .clock-panel::before {
+  content: ""; position: absolute; inset: 0; -webkit-app-region: drag;
+}
+body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line-height: 1; cursor: default; }
 body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
 body.clockmode #clock-ms { font-size: 6.3vw; }
-body.clockmode .row-sub, body.clockmode #ov-bar { display: none !important; }   /* 纯钟面：其余一律不显示 */
+body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一律不显示 */
+
+/* 悬停浮现操作药丸：⠿ 拖动 + ✕ 还原（静止时纯显示） */
+.face-pill {
+  position: absolute; top: 6px; right: 8px; z-index: 3;
+  display: none; gap: 5px; opacity: 0; transition: opacity .25s;
+}
+body.clockmode .face-pill { display: flex; }
+body.clockmode .clock-panel:hover .face-pill { opacity: 1; }
+.face-pill .grip, .face-pill button {
+  font-size: 11px; padding: 3px 9px; border-radius: 999px;
+  background: rgba(8, 13, 24, 0.85); border: 1px solid var(--stroke); color: var(--txt);
+}
+.face-pill .grip { -webkit-app-region: drag; cursor: move; letter-spacing: .2em; }
+.face-pill button { cursor: pointer; }
+.face-pill button:hover { color: #d9f6ff; border-color: rgba(57, 215, 255, 0.5); }
+
+/* 首次进入操作提示（3.5s 自动消失，之后记住不再显示） */
+#face-hint {
+  position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%);
+  font-size: 10px; color: var(--dim); white-space: nowrap; display: none; pointer-events: none;
+}
+body.clockmode #face-hint.show { display: block; }
 
 /* ---------- 标题栏状态灯（校时 · ADB · 音频） ---------- */
 .tb-lights { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }

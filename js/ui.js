@@ -231,22 +231,20 @@
       TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
       TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
       TC.$('tb-overlay').addEventListener('click', toggleClockMode);
-      // 仅时间形态的小工具条：穿透切换 / 退出形态
-      const ovCtBtn = document.getElementById('ov-ct');
-      const syncCt = () => window.electronAPI.get().then(st => {
-        if (ovCtBtn) { ovCtBtn.textContent = st.ct ? '已穿透' : '穿透'; ovCtBtn.classList.toggle('on', !!st.ct); }
-      }).catch(() => {});
-      if (ovCtBtn) {
-        ovCtBtn.addEventListener('click', () => {
-          window.electronAPI.get().then(st => window.electronAPI.send('clickthrough', { on: !st.ct })).then(syncCt);
-        });
-        window.electronAPI.get().then(syncCt).catch(() => {});
-      }
-      const ovCloseBtn = document.getElementById('ov-close');
-      if (ovCloseBtn) ovCloseBtn.addEventListener('click', toggleClockMode);
-      // 纯钟面形态：双击任意处退出（无可见按钮）
-      document.querySelector('.clock-panel').addEventListener('dblclick', () => {
+      // 钟面形态：药丸「✕ 还原」+ 双击时间区退出 + 首次 3.5s 操作提示
+      const faceExit = document.getElementById('face-exit');
+      if (faceExit) faceExit.addEventListener('click', toggleClockMode);
+      document.querySelector('.clock-panel .row-main').addEventListener('dblclick', () => {
         if (document.body.classList.contains('clockmode')) toggleClockMode();
+      });
+      let hintShown = false;
+      const faceHint = document.getElementById('face-hint');
+      TC.bus.on('clockmode', on => {
+        if (on && faceHint && !hintShown && localStorage.getItem('tc.hint.clock') !== '1') {
+          hintShown = true;
+          faceHint.classList.add('show');
+          setTimeout(() => { faceHint.classList.remove('show'); localStorage.setItem('tc.hint.clock', '1'); }, 3500);
+        }
       });
       // 形态状态同步：乐观切换 + 定期从主进程回读（覆盖直接 IPC / 边缘时序）
       const syncClockMode = () => window.electronAPI.get().then(st => {
@@ -389,12 +387,13 @@
   }
   window.addEventListener('resize', () => { clearTimeout(densTimer); densTimer = setTimeout(applyDensity, 120); });
 
-  /* 仅时间形态：同一窗口的钟面形态（Ctrl+1 / 标题栏 ◉ / 双击钟面 退出） */
+  /* 仅时间形态：同一窗口的钟面形态（Ctrl+1 / 标题栏 ◉ / 双击时间区 退出） */
   function toggleClockMode() {
     const on = !document.body.classList.contains('clockmode');
     document.body.classList.toggle('clockmode', on);
     if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
-    toast(on ? '仅时间形态：右键菜单切换形态 · Ctrl+1 / 双击 / Esc 退出' : '已退出仅时间形态');
+    TC.bus.emit('clockmode', on);
+    toast(on ? '仅时间形态：双击或右键退出 · 悬停右上角 · 拖边缘移动' : '已退出仅时间形态');
   }
 
   // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用

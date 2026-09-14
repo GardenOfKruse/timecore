@@ -138,6 +138,10 @@ function showContextMenu() {
   if (!win) return;
   const menu = Menu.buildFromTemplate([
     { label: '还原窗口（退出仅时间）', visible: clockMode, click: () => doSize({ preset: 'clock' }) },
+    {
+      label: ctMode ? '关闭点击穿透' : '点击穿透（鼠标穿过窗口）', visible: clockMode,
+      click: () => { ctMode = !ctMode; if (clockMode) win.setIgnoreMouseEvents(ctMode, { forward: true }); }
+    },
     { type: 'separator', visible: clockMode },
     { label: '正常 1180×760', click: () => doSize({ preset: 'standard' }) },
     { label: '小窗 480×320', click: () => doSize({ preset: 'small' }) },

@@ -91,14 +91,19 @@ const cmUi = JSON.parse(await js(`(() => {
 })()`));
 check('仅时间：时钟毫秒跳动、其余 UI 隐藏', cmUi.hms && cmUi.ms3 && cmUi.hidden3d && cmUi.hiddenCd, cmUi);
 check('仅时间：字号 vw 等比（280 宽→约35px）', cmUi.hmsPx > 30 && cmUi.hmsPx < 40, cmUi.hmsPx);
-await js(`document.getElementById('ov-ct').click()`);
-await sleep(400);
-const ct = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
-check('仅时间：点击穿透可切换', ct.ct === true && ct.clock === true, ct);
-await js(`electronAPI.send('size', { preset: 'clock' })`);   // 再按一次 = 退出形态
+check('仅时间：悬停药丸存在（✕ 还原）', await js(`!!document.getElementById('face-exit')`), null);
+
+// 双击时间区 = 退出形态（拖拽垫层不再吃事件）
+await js(`document.querySelector('.clock-panel .row-main').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
 const exOk = await waitJs(`innerWidth > 1000 && !document.body.classList.contains('clockmode')`);
 const exSt = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));
-check('仅时间：退出还原原尺寸', exOk && exSt.clock === false && exSt.ct === false, { w: await js('innerWidth') });
+check('仅时间：双击退出并还原原尺寸', exOk && exSt.clock === false && exSt.ct === false, { w: await js('innerWidth') });
+
+// 重新进入（供后续截图/穿透语义保留验证：穿透只经右键菜单，UI 无入口）
+await js(`electronAPI.send('size', { preset: 'clock' })`);
+await waitJs(`document.body.classList.contains('clockmode')`);
+await js(`electronAPI.send('size', { preset: 'clock' })`);   // 退出还原
+await waitJs(`!document.body.classList.contains('clockmode')`);
 
 // B: 驻留期下一轮预告（10s 对齐 → 零点后 fired && hasNext；轮询预告文本本身）
 await js(`TC.Countdown.startAligned(10000, 3, false)`);

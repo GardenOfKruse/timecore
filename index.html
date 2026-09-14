@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=138">
+<link rel="stylesheet" href="css/style.css?v=139">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -22,8 +22,9 @@
       <span id="clock-date" class="dim">—</span>
       <select id="tz-select" data-testid="tz" title="切换时区"></select>
       <span id="sync-badge" data-testid="sync" class="badge"><i class="dot"></i><b>本地时钟</b></span>
-      <span id="ov-bar"><button id="ov-ct" title="点击穿透：开启后鼠标穿过钟面（Ctrl+1 退出形态自动解除）">穿透</button><button id="ov-close" title="退出仅时间形态 (Ctrl+1)">退出</button></span>
     </div>
+    <span class="face-pill"><span class="grip" title="拖动移动">⠿</span><button id="face-exit" title="还原窗口 (Ctrl+1)">✕ 还原</button></span>
+    <div id="face-hint">双击退出 · 悬停右上角 · 右键更多 · 拖边缘或 ⠿ 移动</div>
   </section>
 
   <!-- 控制按钮（窗口控制在标题栏，此处仅应用功能） -->
@@ -198,16 +199,16 @@
 
 <noscript>TIMECORE 需要 JavaScript。</noscript>
 <script src="vendor/three.min.js"></script>
-<script src="js/core.js?v=138"></script>
-<script src="js/time-sync.js?v=138"></script>
-<script src="js/clock.js?v=138"></script>
-<script src="js/countdown.js?v=138"></script>
-<script src="js/beats.js?v=138"></script>
-<script src="js/audio.js?v=138"></script>
-<script src="js/scene3d.js?v=138"></script>
-<script src="js/ui.js?v=138"></script>
-<script src="js/adb.js?v=138"></script>
-<script src="js/main.js?v=138"></script>
-<script src="js/test.js?v=138"></script>
+<script src="js/core.js?v=139"></script>
+<script src="js/time-sync.js?v=139"></script>
+<script src="js/clock.js?v=139"></script>
+<script src="js/countdown.js?v=139"></script>
+<script src="js/beats.js?v=139"></script>
+<script src="js/audio.js?v=139"></script>
+<script src="js/scene3d.js?v=139"></script>
+<script src="js/ui.js?v=139"></script>
+<script src="js/adb.js?v=139"></script>
+<script src="js/main.js?v=139"></script>
+<script src="js/test.js?v=139"></script>
 </body>
 </html>
