@@ -87,9 +87,11 @@ const cmUi = JSON.parse(await js(`(() => {
   return JSON.stringify({ hms: /\\d{2}:\\d{2}:\\d{2}/.test(cd ? cd.textContent : ''),
     ms3: /^\\.\\d{3}$/.test(ms ? ms.textContent : ''),
     hidden3d: getComputedStyle(document.getElementById('scene')).display === 'none',
-    hiddenCd: getComputedStyle(document.querySelector('.cd-panel')).display === 'none' });
+    hiddenCd: getComputedStyle(document.querySelector('.cd-panel')).display === 'none',
+    hmsPx: parseFloat(getComputedStyle(cd).fontSize) });
 })()`));
 check('仅时间：时钟毫秒跳动、其余 UI 隐藏', cmUi.hms && cmUi.ms3 && cmUi.hidden3d && cmUi.hiddenCd, cmUi);
+check('仅时间：字号 vw 等比（280 宽→约35px）', cmUi.hmsPx > 30 && cmUi.hmsPx < 40, cmUi.hmsPx);
 await js(`document.getElementById('ov-ct').click()`);
 await sleep(400);
 const ct = JSON.parse(await js(`(async () => JSON.stringify(await electronAPI.get()))()`));

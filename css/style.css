@@ -477,8 +477,8 @@ body.clockmode .clock-panel {
   backdrop-filter: blur(12px); -webkit-app-region: drag;   /* 面板即拖拽区 */
 }
 body.clockmode .row-main { flex-wrap: nowrap; gap: 1px; line-height: 1; }
-body.clockmode #clock-hms { font-size: 36px; font-weight: 600; }
-body.clockmode #clock-ms { font-size: 18px; }
+body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
+body.clockmode #clock-ms { font-size: 6.3vw; }
 body.clockmode .row-sub, body.clockmode #ov-bar { display: none !important; }   /* 纯钟面：其余一律不显示 */
 
 /* ---------- 标题栏状态灯（校时 · ADB · 音频） ---------- */

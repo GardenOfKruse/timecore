@@ -395,7 +395,7 @@
     const on = !document.body.classList.contains('clockmode');
     document.body.classList.toggle('clockmode', on);
     if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
-    toast(on ? '仅时间形态：Ctrl+1 / Esc / 双击钟面 退出 · 拖动面板移动' : '已退出仅时间形态');
+    toast(on ? '仅时间形态：右键菜单切换形态 · Ctrl+1 / 双击 / Esc 退出' : '已退出仅时间形态');
   }
 
   // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用

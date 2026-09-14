@@ -1,5 +1,5 @@
 /* Electron 主进程：透明无边框窗口 + 始终置顶 + 全屏 + 透明度 + ADB 齐射 */
-const { app, BrowserWindow, ipcMain, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, shell, Menu } = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const pathM = require('path');
@@ -77,74 +77,94 @@ function createWindow() {
   win.on('close', saveBounds);
   // 外部途径引起的全屏变化（如 HTML5 全屏）也要回写显式状态
   win.on('enter-full-screen', () => { fsState = true; });
-  win.on('leave-full-screen', () => { fsState = false; });
+  win.on('leave-full-screen', () => { fsState = false });
+  win.webContents.on('context-menu', showContextMenu);   // 右键菜单（钟面形态的主入口：拖拽区不透传鼠标事件）
   win.loadFile(pathM.join(__dirname, '..', 'index.html'));
+}
+
+/* 窗口命令（IPC 与右键菜单共用） */
+function toggleTop() {
+  if (!win) return;
+  win.setAlwaysOnTop(!win.isAlwaysOnTop(), 'screen-saver');
+}
+function toggleFs() {
+  if (!win) return;
+  // 透明无边框窗口上 isFullScreen() 误报，用显式状态取反；
+  // setBounds 做真实尺寸变化，setFullScreen 仅负责隐藏任务栏
+  fsState = !fsState;
+  if (fsState) {
+    prevBounds = win.getBounds();
+    win.setBounds(screen.getPrimaryDisplay().bounds);
+    win.setFullScreen(true);
+  } else {
+    win.setFullScreen(false);
+    if (prevBounds) win.setBounds(prevBounds);
+  }
+}
+function exitClock() {
+  clockMode = false; ctMode = false;
+  win.setIgnoreMouseEvents(false);
+  win.setMinimumSize(320, 240);
+  if (clockPrev) win.setBounds(clockPrev);
+}
+function doSize(arg) {
+  if (!win) return;
+  // 'clock'（仅时间形态）为开关：进入时记住原 bounds，退出时还原——同一窗口的不同形态
+  if (arg && arg.preset === 'clock') {
+    if (clockMode) { exitClock(); return; }
+    clockPrev = win.getBounds();
+    clockMode = true;
+    if (fsState) { fsState = false; win.setFullScreen(false); }
+    win.setMinimumSize(120, 60);
+    applyPreset(PRESETS.clock);
+    if (ctMode) win.setIgnoreMouseEvents(true, { forward: true });
+    return;
+  }
+  // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
+  if (clockMode) exitClock();
+  const p = PRESETS[arg && arg.preset];
+  if (!p) return;
+  if (fsState) { fsState = false; win.setFullScreen(false); }
+  applyPreset(p);
+}
+function applyPreset(p) {
+  const cur = win.getBounds();
+  const wa = screen.getDisplayMatching({ x: cur.x, y: cur.y, width: p[0], height: p[1] }).workArea;
+  const w = Math.min(p[0], wa.width - 10), h = Math.min(p[1], wa.height - 10);
+  const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
+  const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
+  win.setBounds({ x, y, width: w, height: h });
+}
+
+/* 右键菜单：全形态可用（钟面形态的尺寸/退出主入口——拖拽区不向页面投递鼠标事件，页内按钮收不到） */
+function showContextMenu() {
+  if (!win) return;
+  const menu = Menu.buildFromTemplate([
+    { label: '退出仅时间', visible: clockMode, click: () => doSize({ preset: 'clock' }) },
+    { type: 'separator', visible: clockMode },
+    { label: '标准 1180×760', click: () => doSize({ preset: 'standard' }) },
+    { label: '宽屏 1280×720', click: () => doSize({ preset: 'wide' }) },
+    { label: '窄屏 560×760', click: () => doSize({ preset: 'narrow' }) },
+    { label: '手机屏 380×720', click: () => doSize({ preset: 'phone' }) },
+    { label: '小窗 480×320', click: () => doSize({ preset: 'small' }) },
+    { label: '仅时间 280×96', click: () => doSize({ preset: 'clock' }) },
+    { type: 'separator' },
+    { label: fsState ? '退出全屏' : '全屏', click: toggleFs },
+    { label: win.isAlwaysOnTop() ? '取消置顶' : '窗口置顶', click: toggleTop },
+    { type: 'separator' },
+    { label: '关闭', click: () => win.close() }
+  ]);
+  menu.popup({ window: win });
 }
 
 ipcMain.on('win', (ev, cmd, arg) => {
   if (!win) return;
   switch (cmd) {
-    case 'top': {
-      const v = !win.isAlwaysOnTop();
-      win.setAlwaysOnTop(v, 'screen-saver');
-      break;
-    }
+    case 'top': toggleTop(); break;
     case 'opacity': win.setOpacity(Math.min(1, Math.max(0.3, Number(arg) || 1))); break;
     case 'minimize': win.minimize(); break;
-    case 'fullscreen': {
-      // 透明无边框窗口上 isFullScreen() 误报，用显式状态取反；
-      // setBounds 做真实尺寸变化，setFullScreen 仅负责隐藏任务栏
-      fsState = !fsState;
-      if (fsState) {
-        prevBounds = win.getBounds();
-        win.setBounds(screen.getPrimaryDisplay().bounds);
-        win.setFullScreen(true);
-      } else {
-        win.setFullScreen(false);
-        if (prevBounds) win.setBounds(prevBounds);
-      }
-      break;
-    }
-    case 'size': {
-      // 尺寸预设：保持窗口中心不变，钳到所在显示器工作区；全屏中先退出再应用。
-      // 'clock'（仅时间形态）为开关：进入时记住原 bounds，退出时还原——同一窗口的不同形态
-      if (arg && arg.preset === 'clock') {
-        if (clockMode) {
-          clockMode = false; ctMode = false; win.setIgnoreMouseEvents(false);
-          win.setMinimumSize(320, 240);
-          if (clockPrev) win.setBounds(clockPrev);
-          break;
-        }
-        clockPrev = win.getBounds();
-        clockMode = true;
-        if (fsState) { fsState = false; win.setFullScreen(false); }
-        win.setMinimumSize(120, 60);
-        const cur = win.getBounds();
-        const wa = screen.getDisplayMatching(cur).workArea;
-        const w = Math.min(PRESETS.clock[0], wa.width - 10), h = Math.min(PRESETS.clock[1], wa.height - 10);
-        const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
-        const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
-        win.setBounds({ x, y, width: w, height: h });
-        if (ctMode) win.setIgnoreMouseEvents(true, { forward: true });
-        break;
-      }
-      // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
-      if (clockMode) {
-        clockMode = false; ctMode = false; win.setIgnoreMouseEvents(false);
-        win.setMinimumSize(320, 240);
-        if (clockPrev) win.setBounds(clockPrev);
-      }
-      const p = PRESETS[arg && arg.preset];
-      if (!p) break;
-      if (fsState) { fsState = false; win.setFullScreen(false); }
-      const cur = win.getBounds();
-      const wa = screen.getDisplayMatching({ x: cur.x, y: cur.y, width: p[0], height: p[1] }).workArea;
-      const w = Math.min(p[0], wa.width - 10), h = Math.min(p[1], wa.height - 10);
-      const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
-      const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
-      win.setBounds({ x, y, width: w, height: h });
-      break;
-    }
+    case 'fullscreen': toggleFs(); break;
+    case 'size': doSize(arg); break;
     case 'clickthrough': {
       // 仅时间形态的点击穿透（该形态下生效；退出形态时自动解除）
       ctMode = !!(arg && arg.on);
