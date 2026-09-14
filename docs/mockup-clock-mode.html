@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>TIMECORE · 仅时间形态交互重设计 Mockup</title>
+<style>
+:root {
+  --accent: #39d7ff; --panel: rgba(9,15,27,.46); --stroke: rgba(150,210,255,.14);
+  --txt: #dbeaff; --dim: rgba(219,234,255,.55); --warm: #ffb347;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #060a14; color: var(--txt);
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  padding: 40px 48px 80px;
+}
+h1 { font-size: 22px; letter-spacing: .12em; color: #eaf6ff; }
+h1 small { color: var(--accent); font-size: 12px; letter-spacing: .2em; display: block; margin-bottom: 6px; }
+h2 { font-size: 16px; color: var(--accent); margin: 48px 0 12px; letter-spacing: .08em; border-left: 3px solid var(--accent); padding-left: 10px; }
+.lead { color: var(--dim); font-size: 13px; line-height: 1.9; max-width: 900px; }
+.grid { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+
+/* ===== 窗口模拟框 ===== */
+.win {
+  border-radius: 14px; overflow: hidden; position: relative; flex: none;
+  border: 1px solid rgba(150,210,255,.25); box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.win .tb {
+  height: 30px; display: flex; align-items: center; padding: 0 10px; gap: 8px;
+  background: rgba(8,13,24,.72); font-size: 10px; letter-spacing: .3em; color: var(--dim);
+}
+.win .tb .sp { flex: 1; }
+.win .tb b { color: #4dffa6; font-weight: 400; letter-spacing: 0; }
+.win .stage {
+  background: radial-gradient(600px 400px at 50% 42%, #0d1b33 0%, #060a14 60%, #030509 100%);
+  position: relative;
+}
+.planet {
+  width: 180px; height: 180px; border-radius: 50%; margin: 30px auto;
+  background: radial-gradient(circle at 35% 35%, #7ec8e3 0%, #3a7bd5 35%, #1a3f7a 70%, #0c1f42 100%);
+  box-shadow: 0 0 60px rgba(57,215,255,.45), inset -18px -14px 40px rgba(0,0,0,.5);
+  position: relative;
+}
+.planet::after { content:""; position:absolute; inset:-14px; border-radius:50%;
+  border: 2px solid rgba(57,215,255,.25); border-right-color: transparent; transform: rotate(30deg); }
+.cap { font-size: 12px; color: var(--dim); margin: 10px 4px 26px; line-height: 1.8; max-width: 460px; }
+.cap b { color: var(--txt); }
+.tag { display:inline-block; font-size: 11px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid rgba(57,215,255,.4); color: var(--accent); margin-bottom: 8px; letter-spacing: .08em; }
+
+/* ===== 完整态：新增「聚焦」按钮 ===== */
+.ctrl { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; }
+.ctrl i {
+  width: 30px; height: 26px; border-radius: 8px; font-style: normal; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; color: var(--txt);
+  background: rgba(9,15,27,.46); border: 1px solid var(--stroke); cursor: default;
+}
+.ctrl i.focus {
+  width: auto; padding: 0 10px; font-size: 12px; color: #d9f6ff;
+  background: rgba(57,215,255,.2); border-color: rgba(57,215,255,.5); cursor: pointer;
+}
+.ctrl i.focus::before { content: "◎ 聚焦"; }
+.demo-full { width: 560px; }
+.demo-full .stage { height: 320px; }
+.cd-panel {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  background: var(--panel); border: 1px solid var(--stroke); border-radius: 12px;
+  padding: 8px 22px 10px; text-align: center; backdrop-filter: blur(8px); min-width: 300px;
+}
+.cd-panel .digits { font: 600 30px/1.1 Consolas, monospace; color: #eaf6ff; }
+.cd-panel .sub { font-size: 10px; color: var(--dim); margin-top: 2px; }
+.clock-box {
+  position: absolute; top: 10px; left: 12px; background: var(--panel);
+  border: 1px solid var(--stroke); border-radius: 10px; padding: 8px 14px;
+  font: 600 24px/1.05 Consolas, monospace; color: #eaf6ff;
+}
+.clock-box small { font-size: 11px; color: var(--accent); font-weight: 400; }
+
+/* ===== 钟面态：hover 浮现药丸 ===== */
+.demo-clock { width: 420px; }
+.demo-clock .stage.face {
+  height: 130px; display: flex; align-items: center; justify-content: center;
+  background: rgba(9,15,27,.72);
+}
+.face .digits { font: 600 44px/1 Consolas, monospace; color: #fff; letter-spacing: .02em; }
+.face .digits small { font-size: 22px; color: var(--accent); font-weight: 400; }
+.face .rim { position: absolute; inset: 0; border-radius: 12px;
+  box-shadow: inset 0 0 0 6px rgba(57,215,255,.06); pointer-events: none; }
+.pill {
+  position: absolute; top: 8px; right: 8px; display: flex; gap: 5px;
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+.demo-clock .stage:hover .pill { opacity: 1; pointer-events: auto; }
+.pill span {
+  font-size: 11px; padding: 3px 10px; border-radius: 999px; cursor: pointer;
+  background: rgba(8,13,24,.85); border: 1px solid var(--stroke); color: var(--txt);
+}
+.pill span.pri { color: #d9f6ff; border-color: rgba(57,215,255,.5); }
+.hint {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  font-size: 10px; color: var(--dim); white-space: nowrap; opacity: .8;
+}
+.dragzone { position: absolute; left: 8px; bottom: 8px; font-size: 11px; color: var(--dim);
+  opacity: .7; cursor: move; }
+
+/* ===== 状态机 ===== */
+.flow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 18px 0 8px; }
+.state {
+  border: 1px solid var(--stroke); border-radius: 12px; padding: 12px 18px;
+  background: var(--panel); min-width: 170px;
+}
+.state b { color: #eaf6ff; font-size: 14px; display: block; margin-bottom: 4px; }
+.state span { font-size: 11px; color: var(--dim); line-height: 1.7; display: block; }
+.arrow { color: var(--accent); font-size: 12px; text-align: center; line-height: 1.6; }
+.arrow em { display: block; font-style: normal; color: var(--dim); font-size: 10px; }
+
+/* ===== 变更清单 ===== */
+ul.changes { padding-left: 0; list-style: none; max-width: 900px; }
+ul.changes li {
+  margin: 10px 0; padding: 12px 16px; border: 1px solid var(--stroke); border-radius: 10px;
+  background: rgba(9,15,27,.35); font-size: 13px; line-height: 1.8;
+}
+ul.changes li b { color: var(--accent); }
+ul.changes li .old { color: #ff8ca0; text-decoration: line-through; opacity: .75; margin-right: 8px; }
+ul.changes li .q { color: var(--warm); }
+</style>
+</head>
+<body>
+
+<h1><small>MOCKUP · 供讨论，非最终实现</small>仅时间形态交互重设计</h1>
+<p class="lead">设计原则：<b>「聚焦」是一个双向开关，不是一个单向陷阱</b>。进入方式和退出方式一一对应、可见可发现；窗口拖拽只发生在边缘留白和把手区，中央时间区域保留完整鼠标交互。</p>
+
+<h2>一、交互模型（状态机）</h2>
+<div class="flow">
+  <div class="state"><b>◎ 完整态（正常 / 小窗）</b><span>时钟 + 倒计时 + 全部控件<br>右上角新增「◎ 聚焦」按钮<br>双击星球 = 也能进入聚焦</span></div>
+  <div class="arrow">⟶<em>◎ 聚焦 / 双击星球<br>Ctrl+1</em></div>
+  <div class="state"><b>◉ 钟面态（纯显示）</b><span>只有 时:分:秒.毫秒，随窗口等比缩放<br>悬停浮现退出药丸（还原 / 置顶）<br>右键菜单全功能 · 拖边缘移动<br><b style="color:var(--warm)">双击钟面 = 退出</b></span></div>
+  <div class="arrow">⟶<em>药丸「还原」/ 双击<br>右键「还原窗口」/ Esc</em></div>
+  <div class="state"><b>◎ 回到进入前的形态</b><span>记住进入前尺寸，退出即还原<br>（正常 ⇄ 小窗由 C 键切换）</span></div>
+</div>
+
+<h2>二、完整态 → 新增「聚焦」按钮（右上角，第一眼可见）</h2>
+<div class="grid">
+  <div>
+    <div class="win demo-full">
+      <div class="tb">TIMECORE v1.2 <span class="sp"></span><b>● ● ●</b></div>
+      <div class="stage">
+        <div class="ctrl">
+          <i>♪</i><i>⌁</i><i>▢</i><i class="focus"></i><i>ADB</i><i>⚙</i>
+        </div>
+        <div class="clock-box">01:22:28<small>.028</small></div>
+        <div class="planet"></div>
+        <div class="cd-panel">
+          <div class="digits">00:04.120</div>
+          <div class="sub">触发 17:00:30.000 · 每10秒</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><span class="tag">变更 ①</span>控制条新增 <b>「◎ 聚焦」</b>按钮（替代现在的 ◉，位置固定在 ADB 左侧，与其它按钮同排）。<b>双击星球</b>是第二入口——星球是页面最大的视觉主体，双击它进入"只看时间"符合直觉（类比视频播放器双击全屏）。</p>
+  </div>
+</div>
+
+<h2>三、钟面态 → 悬停浮现退出药丸（不再是无出口的陷阱）</h2>
+<div class="grid">
+  <div>
+    <span class="tag">👆 把鼠标移到下面钟面上试试</span>
+    <div class="win demo-clock">
+      <div class="stage face">
+        <div class="rim"></div>
+        <div class="digits">01:22:33<small>.645</small></div>
+        <div class="pill">
+          <span>⠿ 拖动</span><span>◈ 置顶</span><span class="pri">✕ 还原窗口</span>
+        </div>
+        <div class="hint">首次进入 3 秒提示：双击退出 · 悬停右上角 · 右键更多 · 拖边缘移动（之后不再显示）</div>
+      </div>
+    </div>
+    <p class="cap"><span class="tag">变更 ②</span><b>悬停浮现药丸</b>（视频播放器控制条模式）：静止时纯显示，鼠标移入右上角浮现「⠿ 拖动 / ◈ 置顶 / ✕ 还原窗口」。<br><span class="tag">变更 ③</span><b>双击钟面 = 退出</b>——为此把拖拽区从"整个面板"改为<b>边缘留白 + ⠿ 把手</b>，中央时间区域恢复完整鼠标事件（这是现在双击失效的根因）。<br><span class="tag">变更 ④</span><b>首次进入显示 3 秒操作提示</b>，之后记住不再打扰。</p>
+  </div>
+</div>
+
+<h2>四、右键菜单（保持全形态可用，精简后）</h2>
+<p class="lead" style="margin-top:0">
+<pre style="background:rgba(9,15,27,.5); border:1px solid var(--stroke); border-radius:10px; padding:14px 20px; font-size:13px; line-height:2; display:inline-block; margin:0;">
+还原窗口（退出仅时间）   ← 仅钟面态显示
+──────────
+正常 1180×760
+小窗 480×320
+仅时间 280×96
+──────────
+全屏 / 退出全屏
+窗口置顶 / 取消置顶
+──────────
+关闭
+</pre>
+</p>
+
+<h2>五、相对现状的变更清单</h2>
+<ul class="changes">
+  <li><b>① 入口对称</b>：<span class="old">进入靠 ◉/Ctrl+1，退出靠隐形手势</span> 进入=右上「◎ 聚焦」或双击星球；退出=悬停药丸 / 双击钟面 / 右键 / Esc——<span class="q">每个状态都有至少两个可见或半可见出口</span></li>
+  <li><b>② 拖拽区拆分</b>：<span class="old">整个面板 = 拖拽区（吃掉一切点击）</span> 拖拽只保留边缘 8px 留白 + ⠿ 把手，中央时间区双击可用</li>
+  <li><b>③ 首次引导</b>：<span class="old">无提示，用户困在钟面</span> 首次进入浮现 3 秒操作提示（tc.hint.clock 持久化）</li>
+  <li><b>④ 形态收敛</b>：<span class="old">正常/宽屏/窄屏/手机屏/小窗/仅时间/全屏</span> <b>正常 / 小窗 / 仅时间 / 全屏</b> 四档（已完成），宽屏等删除</li>
+  <li><b>⑤ 字号等比</b>：钟面字号 12.6vw 随窗口拉伸等比缩放（已完成，保留）</li>
+  <li><b>⑥ C 键简化</b>：<span class="old">五档循环</span> 正常 ⇄ 小窗 二态切换（已完成，保留）</li>
+</ul>
+
+<h2>六、待你拍板的问题</h2>
+<ul class="changes">
+  <li><span class="q">Q1</span> 钟面态要不要保留「穿透」？目前悬停药丸里没放（穿透开启后药丸也点不到，需要从完整态入口管理）。方案 A：砍掉穿透；方案 B：放右键菜单「穿透 开/关」</li>
+  <li><span class="q">Q2</span> 双击星球进入聚焦——星球同时是击拍热区（左键击拍），双击会先触发两次击拍判定。可接受 / 或只保留按钮入口？</li>
+  <li><span class="q">Q3</span> 钟面态默认尺寸 280×96 保持，还是加一档「大钟面」（如 560×120，适合直播/演示）？</li>
+</ul>
+
+</body>
+</html>
