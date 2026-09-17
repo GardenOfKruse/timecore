@@ -22,8 +22,18 @@ jobs:
         env:
           ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
 
+      # runner 偶发在下载/上传阶段无限挂死：15 分钟超时失败后自动重试（最多 3 次）
       - name: Build Windows installer
-        run: npx electron-builder --win --publish always
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 3; $i++) {
+            Write-Host "=== electron-builder attempt $i ==="
+            npx electron-builder --win --publish always
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "attempt $i failed (exit $LASTEXITCODE), retrying..."
+          }
+          exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
