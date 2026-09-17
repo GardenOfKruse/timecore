@@ -309,6 +309,23 @@
           new THREE.MeshStandardMaterial({ color: 0xe8f4ff, metalness: 0.85, roughness: 0.15, emissive: 0x223644, envMapIntensity: 1.5 })
         );
         g.add(sat);
+        // 卫星尾迹：解析角速度回推 22 个渐隐点（加色混合，颜色衰减即透明），1s 行程
+        const TN = 22, tp = new Float32Array(TN * 3), tc = new Float32Array(TN * 3);
+        const cTrail = new THREE.Color(0xd8f2ff);
+        for (let k = 0; k < TN; k++) {
+          const f = Math.pow(1 - k / TN, 2.2);
+          tc[k * 3] = cTrail.r * f; tc[k * 3 + 1] = cTrail.g * f; tc[k * 3 + 2] = cTrail.b * f;
+        }
+        const tg = new THREE.BufferGeometry();
+        tg.setAttribute('position', new THREE.BufferAttribute(tp, 3));
+        tg.setAttribute('color', new THREE.BufferAttribute(tc, 3));
+        const trail = new THREE.Points(tg, new THREE.PointsMaterial({
+          size: 0.055, map: glowTexture(64), vertexColors: true, transparent: true, opacity: 0.6,
+          blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+        }));
+        trail.visible = quality > 0;
+        g.add(trail);
+        sats.push({ m: sat, r: c.r, off: i * 2.1, trail, tp, TN });
       }
       scene.add(g);
       orbits.push({ g, speed: c.speed, r: c.r });
@@ -566,6 +583,7 @@
     else renderer.setPixelRatio(1);
     if (points) points.visible = q > 0;
     if (stars) stars.visible = q > 0;   // 低画质连星野一起省
+    for (const s of sats) if (s.trail) s.trail.visible = q > 0;
   }
 
   function render(dt, ctx) {
@@ -623,8 +641,18 @@
       o.g.rotation.z += dt * o.speed * (0.6 + cur.pSpeed * 0.5);
     }
     for (const s of sats) {
-      const a = t * 0.5 * (0.6 + cur.pSpeed * 0.5) + s.off;
+      const w = 0.5 * (0.6 + cur.pSpeed * 0.5);
+      const a = t * w + s.off;
       s.m.position.set(Math.cos(a) * s.r, Math.sin(a) * s.r, 0);
+      if (s.trail && s.trail.visible) {
+        for (let k = 0; k < s.TN; k++) {
+          const aa = a - k * w * 0.045;
+          s.tp[k * 3] = Math.cos(aa) * s.r;
+          s.tp[k * 3 + 1] = Math.sin(aa) * s.r;
+          s.tp[k * 3 + 2] = 0;
+        }
+        s.trail.geometry.attributes.position.needsUpdate = true;
+      }
     }
 
     // 粒子：30fps 限频（dt 累积器，物理用累积 dt 保证一致）——零点特效高峰期不与 UI 抢主线程
@@ -704,7 +732,8 @@
         intensity: Math.round(k.intensity * 1000) / 1000,
         moon: moonLight ? Math.round(moonLight.intensity * 1000) / 1000 : null,
         override: sunHourOverride,
-        stars: !!stars && stars.visible, meteorActive: meteorT >= 0
+        stars: !!stars && stars.visible, meteorActive: meteorT >= 0,
+        trails: sats.filter(s => s.trail && s.trail.visible).length
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; }
