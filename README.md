@@ -4,7 +4,9 @@
 
 开源协议 MIT · Windows 桌面端（Electron）· 浏览器直接打开也可运行
 
-![TIMECORE 星球核心](docs/planet.png)
+![TIMECORE 星球核心](docs/planet-night.png)
+
+*午夜的真实太阳在星球背面，月半球泛着冷光；星野闪烁、流星划过、卫星拖着光尾——桌面上的一片深空。*
 
 ## 下载安装
 
