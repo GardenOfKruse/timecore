@@ -27,7 +27,7 @@
       catch (_) { k = 'local'; }
       tzKey = k;
       localStorage.setItem('tc.tz', k);
-      last.hms = '';   // 强制重绘
+      last.h = last.m = last.s = '';   // 强制重绘
       TC.bus.emit('tz', k);
     },
 
@@ -40,10 +40,16 @@
     // 主循环每帧调用
     render(e) {
       const p = partsOf(tzKey, e, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short' });
-      const hms = p.hour + ':' + p.minute + ':' + p.second;
-      if (hms !== last.hms) {
-        last.hms = hms;
-        el.hms.textContent = hms;
+      // 时/分/秒独立 span：只有变化的数字对重绘并做 tick 微动画（毫秒不受影响）
+      const cur = { h: p.hour, m: p.minute, s: p.second };
+      for (const k of ['h', 'm', 's']) {
+        if (cur[k] === last[k]) continue;
+        last[k] = cur[k];
+        const n = el.pairs[k];
+        n.textContent = cur[k];
+        n.classList.remove('tick');
+        void n.offsetWidth;   // 重启动画
+        n.classList.add('tick');
       }
       el.ms.textContent = '.' + TC.pad(Math.floor(((e % 1000) + 1000) % 1000), 3);
       const dayKey = p.year + p.month + p.day;
@@ -54,11 +60,26 @@
     }
   };
 
-  const el = {};
-  const last = { hms: '', day: '' };
+  const el = { pairs: {} };
+  const last = { h: '', m: '', s: '', day: '' };
 
   TC.bus.on('boot', () => {
     el.hms = TC.$('clock-hms');
+    // 拆成 HH : MM : SS 三对数字 + 冒号（textContent 仍为 "HH:MM:SS"，测试断言不受影响）
+    el.hms.textContent = '';
+    for (const k of ['h', 'm', 's']) {
+      if (k !== 'h') {
+        const c = document.createElement('span');
+        c.className = 'd-colon';
+        c.textContent = ':';
+        el.hms.appendChild(c);
+      }
+      const s = document.createElement('span');
+      s.className = 'd-pair';
+      s.textContent = '--';
+      el.hms.appendChild(s);
+      el.pairs[k] = s;
+    }
     el.ms = TC.$('clock-ms');
     el.date = TC.$('clock-date');
   });

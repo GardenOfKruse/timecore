@@ -475,13 +475,37 @@ body.clockmode .clock-panel {
   /* 钟面是轻薄仪表面，不复用普通面板的厚阴影/大圆角 */
   background: rgba(9, 15, 27, 0.48); border: 1px solid rgba(190, 225, 255, 0.22); border-radius: 7px;
   box-shadow: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); cursor: default;
+  /* 进入形态的 morph：窗口缓动（主进程）+ 钟面淡入放大，二者同节奏 */
+  animation: clockIn 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
+body.clockmode .clock-panel:hover {
+  border-color: rgba(190, 225, 255, 0.4); background: rgba(13, 20, 35, 0.56);
+}
+/* 呼吸边：钟面唯一的“活”的光——只调制边框亮度（::before 覆层），
+ * 无 box-shadow 辉光、无彩色，不违反辉光配额 */
+body.clockmode .clock-panel::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  border: 1px solid rgba(190, 225, 255, 0.6); opacity: 0; pointer-events: none;
+  animation: faceBreath 5.6s ease-in-out infinite;
+}
+@keyframes faceBreath { 0%, 100% { opacity: 0; } 50% { opacity: 0.4; } }
+@keyframes clockIn { from { opacity: 0; transform: scale(0.96); } }
+/* 退出钟面：主面板/标题栏淡入回归（display 翻转自动重放），与窗口缓动同节奏 */
+.cd-panel, .ctrl-panel, #titlebar { animation: panelIn 0.18s ease-out; }
+@keyframes panelIn { from { opacity: 0; } }
 /* 注意：钟面禁用一切 -webkit-app-region:drag——它会按几何矩形截留整窗鼠标事件
  * （双击/右键全部失效，右键还会弹系统菜单）。移动窗口走手动拖窗（move-begin/move-end IPC）。 */
 body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line-height: 1; }
 body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
 body.clockmode #clock-ms { font-size: 6.3vw; }
 body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一律不显示 */
+
+/* 数字 tick：时/分/秒变化对的上浮淡入（GPU-only transform+opacity，1Hz 至多一次） */
+.d-pair { display: inline-block; }
+.d-colon { opacity: 0.62; }   /* 冒号退一级，数字成为主体 */
+.d-pair.tick { animation: digitTick 0.24s cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes digitTick { from { opacity: 0.25; transform: translateY(-0.14em); } }
 
 /* 首次进入操作提示（3.5s 自动消失，之后记住不再显示） */
 #face-hint {

@@ -55,14 +55,20 @@
 - **位置记忆**：userData/tc-window.json；全屏期间与钟面形态期间**不覆盖**（避免重开是变形尺寸）。
 - 旧版别名 mini/compact 保留在 PRESETS（cycle19 依赖），UI 不再暴露。
 
-### 2.6 仅时间形态（钟面）——交互定稿 v1.2.3
+### 2.6 仅时间形态（钟面）——交互定稿 v1.2.3 / 动效 v1.2.5
 - **显示**：只有 时:分:秒.毫秒 一行，字号 **12.6vw / 6.3vw**（随窗口拉伸等比缩放）；其余 UI 全部隐藏。
 - **退出**：双击任意处（主出口） / 右键菜单「还原窗口」 / Ctrl+1 / Esc。退出还原进入前尺寸（clockPrev）。
 - **移动/缩放**：按住面板拖动 = 手动增量拖窗；鼠标滚轮围绕窗口中心等比缩放（160–1180px 宽），>4px 位移标记 dragMoved 抑制双击误触。
 - **交互提示**：不在时间内容上叠加按钮；双击面板退出，右键菜单管理窗口。
 - **右键菜单**（原生 Menu.popup，webContents context-menu 触发）：还原窗口 / 分隔 / 三形态 / 分隔 / 全屏 / 置顶 / 分隔 / 关闭。
-- **首次提示**：进入时显示 3.5s「双击退出 · 右键更多 · 拖动面板移动」（tc.hint.clock 持久化，仅一次）。
-- **形态状态同步**：渲染端乐观切 class + 800ms 从 win:get 回读（覆盖直接 IPC 路径）。
+- **首次提示**：进入时显示 3.5s「双击退出 · 右键菜单 · 滚轮缩放」（tc.hint.clock 持久化，仅一次；任意入口进入都触发）。
+- **形态状态同步**：主进程 pushState 推送 `win:state`（doSize/toggleFs/toggleTop 后即时发）→ 渲染端秒翻类名 + 800ms win:get 轮询兜底。
+- **动效四件套**（v1.2.5，全部 GPU-only transform/opacity，不动逻辑循环）：
+  1. **数字 tick**：时/分/秒拆独立 span（.d-pair，textContent 仍为 HH:MM:SS），变化的对做 240ms 上浮淡入（digitTick），冒号降为 .62 透明度衬托主体；
+  2. **形态 morph**：主进程 tweenBounds 窗口缓动（easeOutCubic 170ms/16ms 步进，结尾一步落精确目标供 E2E 断言；拖动/全屏/关闭取消；滚轮连滚在逻辑目标上累乘重定向，尺寸序列与逐次到位一致）+ 钟面 clockIn 淡入放大 200ms + 退出时主面板 panelIn 淡入 180ms（display 翻转自动重放）；
+  3. **滚轮丝滑缩放**：zoomClock 走同一 tween；
+  4. **呼吸边**：::before 覆层调制边框亮度（5.6s 正弦，无 box-shadow、无彩色）——见辉光配额例外。
+- 毫秒显示不动画（60fps 直接刷文本，动画会糊）；隐藏页回落 66ms 定时器照常刷新。
 
 ### 2.7 首次启动体验
 - **全新 profile 判定**：tc.welcomed 不存在且所有偏好键为空（判实际状态，非版本号）→ 显示欢迎卡：开启节拍器（顺带解锁 AudioContext）/ 配置 ADB / 直接进入；老用户升级不弹。
@@ -85,16 +91,17 @@
 ## 3. 视觉系统
 
 - **辉光配额**（v1.1.0 定稿）：常驻辉光唯一归属 = 倒计时数字（随阶段 青→琥珀→橙→红→释放白 变色，与 3D 能量环同体系）；瞬时辉光仅 judge 弹出与到点白闪；其余一律扁平。禁止新增装饰性彩色辉光。
+  - **钟面唯一例外（v1.2.5）**：仅时间形态允许一处「呼吸边」——::before 覆层只调制边框亮度（中性色、无 box-shadow 辉光、无彩色），让悬浮钟面有生命感而不破配额。
 - 阶段色：WARMUP #ffb347 / SURGE #ff8c3b / PULSE #ff4d5e / ZERO #fff；accent #39d7ff；面板 rgba(9,15,27,.46) 玻璃 + backdrop blur。
 - 3D 中心：程序化星球（值噪声大陆+云层+大气 BackSide shader），节拍弹跳，粒子 30fps 限频（dt 累积器），震屏为 camera 位移。
-- 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v140）。
+- 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v150）。
 
 ## 4. 架构
 
 - **零框架**：vanilla JS 模块 IIFE + TC 命名空间（core/time-sync/clock/countdown/beats/audio/scene3d/ui/adb/main），three.js 仅 3D。
 - **双驱动循环**：rAF 只渲染 3D；逻辑与 DOM 由 66ms setInterval + 120ms 看门狗驱动（后台/隐藏不冻结）。
-- **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；adb:detect|exec|download。
-- **窗口命令函数化**：doSize/toggleFs/toggleTop 供 IPC 与右键菜单共用。
+- **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；主进程 `win:state` 推送（形态/全屏/置顶变化即时下发）；adb:detect|exec|download。
+- **窗口命令函数化**：doSize/toggleFs/toggleTop 供 IPC 与右键菜单共用，统一走 tweenBounds 窗口缓动并 pushState。
 - 悬浮钟曾是独立 BrowserWindow（v1.2.1 前），v1.2.2 起按用户要求改为同窗口形态，?overlay=1 分支已删。
 
 ## 5. 测试基建（tests/）

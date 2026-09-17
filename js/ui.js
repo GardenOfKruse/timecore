@@ -265,10 +265,16 @@
           setTimeout(() => { faceHint.classList.remove('show'); localStorage.setItem('tc.hint.clock', '1'); }, 3500);
         }
       });
-      // 形态状态同步：乐观切换 + 定期从主进程回读（覆盖直接 IPC / 边缘时序）
-      const syncClockMode = () => window.electronAPI.get().then(st => {
+      // 形态状态同步：主进程推送即时翻转（右键菜单进/出不迟到）+ 800ms 轮询兜底
+      const applyWinState = st => {
+        const was = document.body.classList.contains('clockmode');
         document.body.classList.toggle('clockmode', !!st.clock);
-      }).catch(() => {});
+        if (!was && st.clock) TC.bus.emit('clockmode', true);   // 任意入口进入钟面都触发首次提示
+        syncFullscreenBtn(st.fs);
+        TC.$('tb-top').classList.toggle('active', !!st.top);
+      };
+      if (window.electronAPI.onState) window.electronAPI.onState(applyWinState);
+      const syncClockMode = () => window.electronAPI.get().then(applyWinState).catch(() => {});
       syncClockMode();
       setInterval(syncClockMode, 800);
       window.electronAPI.get().then(st => {
@@ -412,7 +418,7 @@
     document.body.classList.toggle('clockmode', on);
     if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
     TC.bus.emit('clockmode', on);
-    toast(on ? '仅时间形态：双击或右键退出 · 悬停右上角 · 拖边缘移动' : '已退出仅时间形态');
+    toast(on ? '仅时间形态：双击退出 · 右键菜单 · 滚轮缩放' : '已退出仅时间形态');
   }
 
   // 倒计时运行态 → 开始/停止按钮状态化：开始是动作按钮，运行中显示「重新布防」，空闲时停止禁用

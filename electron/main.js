@@ -28,6 +28,7 @@ let moveStart = null;
 
 function beginMove() {
   if (!win) return;
+  cancelTween();   // 拖动优先，缓动让路
   moveStart = { c: screen.getCursorScreenPoint(), b: win.getBounds() };
   clearInterval(moveTimer);
   moveTimer = setInterval(() => {
@@ -37,6 +38,33 @@ function beginMove() {
   }, 16);
 }
 function endMove() { clearInterval(moveTimer); moveTimer = null; }
+
+/* 窗口缓动：形态切换/滚轮缩放不再一步跳变（easeOutCubic ~170ms，步进 16ms）。
+ * 可重定向——滚轮连滚时在逻辑目标上累乘、动画只负责追赶显示；
+ * 结尾一步强制落到精确目标（E2E 有 innerWidth 精确断言）。拖动/全屏/关闭立即取消。 */
+let twTimer = null, twLast = null;   // twLast：最近一次缓动的目标 bounds（连滚重定向的基准）
+function cancelTween() { if (twTimer) { clearInterval(twTimer); twTimer = null; } }
+function tweenBounds(target) {
+  cancelTween();
+  twLast = target;
+  const from = win.getBounds();
+  const dist = Math.abs(from.x - target.x) + Math.abs(from.y - target.y) +
+    Math.abs(from.width - target.width) + Math.abs(from.height - target.height);
+  if (dist < 2) { win.setBounds(target); return; }
+  const D = 170, T0 = Date.now();
+  twTimer = setInterval(() => {
+    if (!win || win.isDestroyed()) { cancelTween(); return; }
+    const t = Math.min(1, (Date.now() - T0) / D);
+    if (t >= 1) { cancelTween(); win.setBounds(target); return; }
+    const k = 1 - Math.pow(1 - t, 3);
+    win.setBounds({
+      x: Math.round(from.x + (target.x - from.x) * k),
+      y: Math.round(from.y + (target.y - from.y) * k),
+      width: Math.round(from.width + (target.width - from.width) * k),
+      height: Math.round(from.height + (target.height - from.height) * k)
+    });
+  }, 16);
+}
 
 function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
 
@@ -93,12 +121,17 @@ function createWindow() {
 }
 
 /* 窗口命令（IPC 与右键菜单共用） */
+function pushState() {   // 形态/全屏/置顶变化即时推给渲染层（类名秒级翻转，动画不迟到）
+  if (win && !win.isDestroyed()) win.webContents.send('win:state', { clock: clockMode, top: win.isAlwaysOnTop(), fs: fsState });
+}
 function toggleTop() {
   if (!win) return;
   win.setAlwaysOnTop(!win.isAlwaysOnTop(), 'screen-saver');
+  pushState();
 }
 function toggleFs() {
   if (!win) return;
+  cancelTween();   // 全屏边界与缓动目标系不同，直接取消进行中的缓动
   // 透明无边框窗口上 isFullScreen() 误报，用显式状态取反；
   // setBounds 做真实尺寸变化，setFullScreen 仅负责隐藏任务栏
   fsState = !fsState;
@@ -110,23 +143,25 @@ function toggleFs() {
     win.setFullScreen(false);
     if (prevBounds) win.setBounds(prevBounds);
   }
+  pushState();
 }
 function exitClock() {
   clockMode = false;
   win.setIgnoreMouseEvents(false);
   win.setMinimumSize(320, 240);
-  if (clockPrev) win.setBounds(clockPrev);
+  if (clockPrev) tweenBounds(clockPrev);
 }
 function doSize(arg) {
   if (!win) return;
   // 'clock'（仅时间形态）为开关：进入时记住原 bounds，退出时还原——同一窗口的不同形态
   if (arg && arg.preset === 'clock') {
-    if (clockMode) { exitClock(); return; }
+    if (clockMode) { exitClock(); pushState(); return; }
     clockPrev = win.getBounds();
     clockMode = true;
     if (fsState) { fsState = false; win.setFullScreen(false); }
     win.setMinimumSize(120, 60);
     applyPreset(PRESETS.clock);
+    pushState();
     return;
   }
   // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
@@ -135,6 +170,7 @@ function doSize(arg) {
   if (!p) return;
   if (fsState) { fsState = false; win.setFullScreen(false); }
   applyPreset(p);
+  pushState();
 }
 function applyPreset(p) {
   const cur = win.getBounds();
@@ -142,22 +178,23 @@ function applyPreset(p) {
   const w = Math.min(p[0], wa.width - 10), h = Math.min(p[1], wa.height - 10);
   const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
   const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
-  win.setBounds({ x, y, width: w, height: h });
+  tweenBounds({ x, y, width: w, height: h });
 }
 function zoomClock(delta) {
   if (!win || !clockMode) return;
-  const b = win.getBounds();
   const ratio = PRESETS.clock[0] / PRESETS.clock[1];
   const minW = 160, maxW = 1180;
-  const nextW = delta < 0 ? b.width * 1.1 : b.width / 1.1;
+  // 连滚基准取逻辑目标（而非动画途中的实际 bounds），尺寸序列与逐次到位完全一致
+  const base = (twTimer && twLast) ? twLast : win.getBounds();
+  const nextW = delta < 0 ? base.width * 1.1 : base.width / 1.1;
   const w = Math.round(Math.max(minW, Math.min(maxW, nextW)));
-  if (w === b.width) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
+  if (w === base.width) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
   const h = Math.round(w / ratio);
-  const wa = screen.getDisplayMatching(b).workArea;
-  // 先锁定当前窗口中心，再以中心生成新 bounds；只有屏幕边缘才做必要钳制。
-  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  const wa = screen.getDisplayMatching(win.getBounds()).workArea;
+  // 锁定逻辑中心（缩放不移动视觉中心），只有屏幕边缘才做必要钳制。
+  const cx = base.x + base.width / 2, cy = base.y + base.height / 2;
   const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-  win.setBounds({ x: Math.max(wa.x, Math.min(x, wa.x + wa.width - w)), y: Math.max(wa.y, Math.min(y, wa.y + wa.height - h)), width: w, height: h });
+  tweenBounds({ x: Math.max(wa.x, Math.min(x, wa.x + wa.width - w)), y: Math.max(wa.y, Math.min(y, wa.y + wa.height - h)), width: w, height: h });
 }
 
 /* 右键菜单：全形态可用（钟面形态的尺寸/退出主入口——拖拽区不向页面投递鼠标事件，页内按钮收不到） */
