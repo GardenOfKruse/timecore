@@ -98,6 +98,7 @@
 - 阶段色：WARMUP #ffb347 / SURGE #ff8c3b / PULSE #ff4d5e / ZERO #fff；accent #39d7ff；面板 rgba(9,15,27,.46) 玻璃 + backdrop blur。
 - 3D 中心：程序化星球（值噪声大陆+云层+大气 BackSide shader），节拍弹跳，粒子 30fps 限频（dt 累积器），震屏为 camera 位移。
 - **真实太阳（v1.3.1）**：key 光方位角按显示时区的真实时刻绕星球转（12:00 正面 / 00:00 背面），高度角艺术定值 2.6；强度 = 昼夜因子 day × 阶段因子；晨昏带色温偏暖；夜半球由反向冷色月光补光。?sunhour=N 固定时刻（测试/截图），TC.Scene.debugSun() 探针。
+- **星空生动化（v1.3.3）**：远景星野 320 颗（自定义点 shader，aPhase 错相慢闪烁，半径 22–44 球壳，低画质隐藏）+ 流星（30–90s 随机一颗，拉伸光斑 0.9s 划过，TC.Scene.meteor() 强制触发）。
 - **开场仪式（v1.3.1）**：主进程 show:false → ready-to-show 再显示；body bootIn 320ms；欢迎卡 wlIn；核心 intensity 从 0 充能到 IDLE（约 1s）。
 - 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v150）。
 
