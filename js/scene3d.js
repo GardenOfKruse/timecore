@@ -16,6 +16,7 @@
    * 12:00 正对镜头照亮面向用户的一侧，00:00 转到背面=夜半球，靠冷色月光补光。
    * 高度角取艺术定值（仅方位角真实）。?sunhour=N 可固定时刻（截图/测试用）。 */
   let moonLight = null, sunHourOverride = null;
+  let hiddenFrames = 0, lastFrameInfo = null;   // 钟面形态跳帧计数 / 最近一次真实渲染的统计（探针用）
   let stars = null, starMat = null;
   let meteor = null, meteorT = -1, meteorNext = 18 + Math.random() * 20;
   const meteorFrom = new THREE.Vector3(), meteorDir = new THREE.Vector3();
@@ -591,6 +592,9 @@
 
   function render(dt, ctx) {
     if (!renderer) return;
+    // 钟面形态：场景 display:none 但 WebGL 仍会跑完整管线——直接跳过整帧，悬浮钟近乎零 GPU
+    if (document.body.classList.contains('clockmode')) { hiddenFrames++; return; }
+    hiddenFrames = 0;
     t += dt;
 
     // 自适应画质：连续低于 40fps 逐级降档
@@ -726,6 +730,7 @@
     camera.lookAt(0, 0, 0);
 
     renderer.render(scene, camera);
+    lastFrameInfo = { calls: renderer.info.render.calls, tris: renderer.info.render.triangles };
   }
 
   TC.Scene = {
@@ -739,6 +744,8 @@
         moon: moonLight ? Math.round(moonLight.intensity * 1000) / 1000 : null,
         override: sunHourOverride,
         stars: !!stars && stars.visible, meteorActive: meteorT >= 0,
+        skipStreak: hiddenFrames,
+        lastFrame: lastFrameInfo,
         trails: sats.filter(s => s.trail && s.trail.visible).length
       } : null;
     },

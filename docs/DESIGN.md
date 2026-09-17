@@ -108,6 +108,7 @@
 
 - **零框架**：vanilla JS 模块 IIFE + TC 命名空间（core/time-sync/clock/countdown/beats/audio/scene3d/ui/adb/main），three.js 仅 3D。
 - **双驱动循环**：rAF 只渲染 3D；逻辑与 DOM 由 66ms setInterval + 120ms 看门狗驱动（后台/隐藏不冻结）。
+- **钟面零渲染（v1.5.0）**：body.clockmode 时 render() 整帧早退（display:none 的 canvas 上 WebGL 仍跑全管线，实测 42 calls/1.7 万 tris/帧）——悬浮钟形态 GPU 近零；skipStreak/lastFrame 暴露于 TC.Scene.debugSun()。
 - **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；主进程 `win:state` 推送（形态/全屏/置顶变化即时下发）；adb:detect|exec|download。
 - **窗口命令函数化**：doSize/toggleFs/toggleTop 供 IPC 与右键菜单共用，统一走 tweenBounds 窗口缓动并 pushState。
 - 悬浮钟曾是独立 BrowserWindow（v1.2.1 前），v1.2.2 起按用户要求改为同窗口形态，?overlay=1 分支已删。

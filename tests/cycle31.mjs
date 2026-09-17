@@ -148,6 +148,15 @@ check('缩放记忆：再进钟面恢复上次宽度', memOk, { w1, w: await js(
 await js(`electronAPI.send('size', { preset: 'clock' })`);   // 退出收尾
 await waitJs(`!document.body.classList.contains('clockmode')`);
 
+// G: 钟面零渲染——clockmode 下整帧 GPU 跳过，退出恢复
+await js(`electronAPI.send('size', { preset: 'clock' })`);
+await waitJs(`document.body.classList.contains('clockmode')`);
+await sleep(600);
+const s1 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+await js(`electronAPI.send('size', { preset: 'clock' })`);   // 退出
+const s2 = await waitJs(`TC.Scene.debugSun().skipStreak === 0`, 3000);
+check('钟面零渲染：跳帧连续增长，退出归零', s1.skipStreak >= 5 && s2, { skipStreak: s1.skipStreak });
+
 const failed = results.filter(p => !p).length;
 console.log('\n==== 循环#31 太阳/星空/尾迹/秒环/脉动/记忆：' + (results.length - failed) + '/' + results.length + ' 通过 ====');
 process.exit(failed ? 1 : 0);
