@@ -366,8 +366,8 @@
       gl_Position = projectionMatrix * mv;
     }`;
   const starFrag = `
-    precision mediump float; varying float vA; uniform vec3 uColor;
-    void main(){ float d = length(gl_PointCoord - vec2(0.5)); float a = smoothstep(0.5, 0.05, d); gl_FragColor = vec4(uColor, a * vA); }`;
+    precision mediump float; varying float vA; uniform vec3 uColor; uniform float uBoost;
+    void main(){ float d = length(gl_PointCoord - vec2(0.5)); float a = smoothstep(0.5, 0.05, d); gl_FragColor = vec4(uColor * uBoost, a * vA); }`;
 
   function buildStars() {
     const N = 320, pos = new Float32Array(N * 3), ph = new Float32Array(N), sz = new Float32Array(N);
@@ -384,7 +384,7 @@
     geo.setAttribute('aSize', new THREE.BufferAttribute(sz, 1));
     starMat = new THREE.ShaderMaterial({
       vertexShader: starVert, fragmentShader: starFrag,
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xcfe6ff) } },
+      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xcfe6ff) }, uBoost: { value: 1 } },
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
     });
     stars = new THREE.Points(geo, starMat);
@@ -518,6 +518,9 @@
     TC.bus.on('cd:zero', () => {
       const fx = (window.TC && TC.fx) ? TC.fx.zero : 2;
       flashT = 0;
+      // 到点流星雨：星野瞬时增亮后回落 + 三颗流星错峰齐落（与到点音景合成完整仪式）
+      if (starMat) starMat.uniforms.uBoost.value = 2.2;
+      for (let i = 0; i < 3; i++) setTimeout(() => { if (quality > 0 && meteor) spawnMeteor(); }, 120 + i * 200);
       if (fx > 0) {
         spawnShock(2.1, new THREE.Color(0xffffff), 1.0, true);
         if (fx >= 2) spawnShock(1.6, new THREE.Color(0xffc46b), 0.8, true);
@@ -604,7 +607,10 @@
     cur.pSpeed += (tgt.pSpeed - cur.pSpeed) * k;
 
     updateSun(ctx.epoch);   // 星球昼夜随真实时间转
-    if (starMat) starMat.uniforms.uTime.value = t;
+    if (starMat) {
+      starMat.uniforms.uTime.value = t;
+      starMat.uniforms.uBoost.value += (1 - starMat.uniforms.uBoost.value) * (1 - Math.exp(-dt * 1.8));   // 增亮后缓慢回落
+    }
     updateMeteor(dt);
 
     // 能量环
