@@ -67,6 +67,9 @@ function tweenBounds(target) {
 }
 
 function boundsFile() { return pathM.join(app.getPath('userData'), 'tc-window.json'); }
+function clockSizeFile() { return pathM.join(app.getPath('userData'), 'tc-clock.json'); }
+function savedClockW() { try { return JSON.parse(fs.readFileSync(clockSizeFile(), 'utf8')).w || 0; } catch (_) { return 0; } }
+function saveClockW(w) { try { fs.writeFileSync(clockSizeFile(), JSON.stringify({ w })); } catch (_) {} }
 
 // 钳回显示器工作区：预设/记忆尺寸可能大于当前屏幕（小屏笔记本、换显示器）
 function clampToWork(b) {
@@ -162,7 +165,10 @@ function doSize(arg) {
     clockMode = true;
     if (fsState) { fsState = false; win.setFullScreen(false); }
     win.setMinimumSize(120, 60);
-    applyPreset(PRESETS.clock);
+    // 缩放记忆：恢复上次的钟面宽度（首次为 280）；宽高比恒定，applyPreset 会钳到工作区
+    const sw = Math.min(1180, Math.max(160, savedClockW() || PRESETS.clock[0]));
+    const ratio = PRESETS.clock[0] / PRESETS.clock[1];
+    applyPreset([sw, Math.round(sw / ratio)]);
     pushState();
     return;
   }
@@ -191,6 +197,7 @@ function zoomClock(delta) {
   const nextW = delta < 0 ? base.width * 1.1 : base.width / 1.1;
   const w = Math.round(Math.max(minW, Math.min(maxW, nextW)));
   if (w === base.width) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
+  saveClockW(w);   // 缩放记忆：下次进入钟面恢复此宽度
   const h = Math.round(w / ratio);
   const wa = screen.getDisplayMatching(win.getBounds()).workArea;
   // 锁定逻辑中心（缩放不移动视觉中心），只有屏幕边缘才做必要钳制。

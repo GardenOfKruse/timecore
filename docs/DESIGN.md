@@ -69,6 +69,8 @@
   3. **滚轮丝滑缩放**：zoomClock 走同一 tween；
   4. **呼吸边**：::before 覆层调制边框亮度（5.6s 正弦，无 box-shadow、无彩色）——见辉光配额例外。
 - 毫秒显示不动画（60fps 直接刷文本，动画会糊）；隐藏页回落 66ms 定时器照常刷新。
+- **秒环（v1.3.1）**：钟面边框即秒针——SVG rect pathLength=1000，彗尾 dasharray 60/940，每帧写 dashoffset，1.6px accent 色绕边框一周/秒；cd:zero 时钟面 zero-pulse 整窗呼吸 550ms。
+- **缩放记忆（v1.3.2）**：滚轮缩放即时写 userData/tc-clock.json，再次进入钟面恢复上次宽度（首用 280，ratio 恒定，applyPreset 钳工作区）。
 
 ### 2.7 首次启动体验
 - **全新 profile 判定**：tc.welcomed 不存在且所有偏好键为空（判实际状态，非版本号）→ 显示欢迎卡：开启节拍器（顺带解锁 AudioContext）/ 配置 ADB / 直接进入；老用户升级不弹。
@@ -76,6 +78,7 @@
 - **ADB 默认停用**；抽屉未启用时 .adb-gate 区整体置灰（pointer-events:none），四步引导卡（开启→装adb→连设备→启用动作）逐步点亮；未授权设备提示；"不用ADB"出口文案。
 
 ### 2.8 ADB 齐射（js/adb.js，仅 Windows）
+- **到点音景（v1.3.1）**：S.fire 三层——sub 冲击（82→36Hz 下坠+二次谐波+低频砰）、五声琶音（C D E G A 上行，左右声像交替+镜像泛音+反声像幽灵回声）、高频钟簇慢衰减；全部走 cue 轨可撤销；master 挂 DynamicsCompressor 防多层叠加爆音。
 - **时序链**：点击时刻 = 节点 − 提前量(默认 100ms) − 传输延迟(echo×3 中位, 60s 新鲜度)；预发射模式提前 1.8s 拉起 adb、设备端 sleep 对齐。
 - **时间轴编排**：每个动作可设节点偏移 `T+N ms`（默认 0）；同一倒计时节点按各动作偏移依次触发，仍复用提前量、延迟校准、预发射与节点去重。
 - **间隔补偿**（cfg.comp 默认开）：probe 实测 input 命令开销 TI（无参 usage 调用×3 中位 − echo RTT），生成脚本 sleep = gap − TI（下限 50ms，无 TI 不补偿）——「间隔」≈ 真实点击间隔。
@@ -94,6 +97,8 @@
   - **钟面唯一例外（v1.2.5）**：仅时间形态允许一处「呼吸边」——::before 覆层只调制边框亮度（中性色、无 box-shadow 辉光、无彩色），让悬浮钟面有生命感而不破配额。
 - 阶段色：WARMUP #ffb347 / SURGE #ff8c3b / PULSE #ff4d5e / ZERO #fff；accent #39d7ff；面板 rgba(9,15,27,.46) 玻璃 + backdrop blur。
 - 3D 中心：程序化星球（值噪声大陆+云层+大气 BackSide shader），节拍弹跳，粒子 30fps 限频（dt 累积器），震屏为 camera 位移。
+- **真实太阳（v1.3.1）**：key 光方位角按显示时区的真实时刻绕星球转（12:00 正面 / 00:00 背面），高度角艺术定值 2.6；强度 = 昼夜因子 day × 阶段因子；晨昏带色温偏暖；夜半球由反向冷色月光补光。?sunhour=N 固定时刻（测试/截图），TC.Scene.debugSun() 探针。
+- **开场仪式（v1.3.1）**：主进程 show:false → ready-to-show 再显示；body bootIn 320ms；欢迎卡 wlIn；核心 intensity 从 0 充能到 IDLE（约 1s）。
 - 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v150）。
 
 ## 4. 架构
