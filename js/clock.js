@@ -52,6 +52,8 @@
         n.classList.add('tick');
       }
       el.ms.textContent = '.' + TC.pad(Math.floor(((e % 1000) + 1000) % 1000), 3);
+      // 秒环：彗尾沿钟面边框每秒绕一周（毫秒驱动）
+      if (el.ring) el.ring.style.strokeDashoffset = String(1000 - (((e % 1000) + 1000) % 1000));
       const dayKey = p.year + p.month + p.day;
       if (dayKey !== last.day) {
         last.day = dayKey;
@@ -82,5 +84,15 @@
     }
     el.ms = TC.$('clock-ms');
     el.date = TC.$('clock-date');
+    el.ring = document.querySelector('.sec-ring rect');
+    // 零点脉动：钟面形态下倒计时归零，整窗呼吸一次
+    TC.bus.on('cd:zero', () => {
+      if (!document.body.classList.contains('clockmode')) return;
+      const panel = document.querySelector('.clock-panel');
+      if (!panel) return;
+      panel.classList.remove('zero-pulse');
+      void panel.offsetWidth;
+      panel.classList.add('zero-pulse');
+    });
   });
 })();
