@@ -12,6 +12,48 @@
   let fpsAcc = 0, fpsN = 0, fpsTimer = 0;
   const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
 
+  /* 真实太阳：key 光绕星球按当地（或当前显示）时区的时刻旋转
+   * 12:00 正对镜头照亮面向用户的一侧，00:00 转到背面=夜半球，靠冷色月光补光。
+   * 高度角取艺术定值（仅方位角真实）。?sunhour=N 可固定时刻（截图/测试用）。 */
+  let moonLight = null, sunHourOverride = null;
+  let sunFmt = null, sunFmtTz = '';
+  const sunCache = { k: -1, h: 12 };
+  function sunHour(tz, e) {
+    if (sunHourOverride != null) return sunHourOverride;
+    const sec = Math.floor(e / 1000);
+    if (sunCache.k === sec) return sunCache.h;
+    try {
+      if (sunFmtTz !== tz) {
+        sunFmtTz = tz;
+        sunFmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz === 'local' ? undefined : tz, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+      const p = {};
+      for (const it of sunFmt.formatToParts(e)) p[it.type] = it.value;
+      if (p.hour === '24') p.hour = '00';
+      sunCache.h = (+p.hour) + (+p.minute) / 60 + (+p.second) / 3600;
+    } catch (_) { const d = new Date(e); sunCache.h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; }
+    sunCache.k = sec;
+    return sunCache.h;
+  }
+  function updateSun(e) {
+    if (!scene.userData.keyLight) return;
+    const tz = (window.TC && TC.Clock) ? TC.Clock.tz : 'local';
+    const h = sunHour(tz, e);
+    const az = ((h - 12) / 24) * Math.PI * 2;      // 12:00 → 0（正面）
+    const R = 6.2;
+    scene.userData.keyLight.position.set(Math.sin(az) * R, 2.6, Math.cos(az) * R);
+    if (moonLight) moonLight.position.set(-Math.sin(az) * R, -1.6, -Math.cos(az) * R);
+    const facing = Math.cos(az);                    // 1 正午 → -1 午夜
+    const day = Math.min(1, Math.max(0.1, (facing + 0.25) / 1.25));
+    const warm = Math.max(0, 1 - Math.abs(facing) / 0.45);   // 晨昏线附近偏暖
+    scene.userData.keyLight.color.setRGB(1, 0.8 + 0.2 * (1 - warm), 0.62 + 0.38 * (1 - warm));
+    scene.userData.keyLight.intensity = day * (0.55 + cur.intensity * 0.25);
+    if (moonLight) {
+      moonLight.intensity = (1 - day) * 0.55;
+      moonLight.color.setHex(0x8fb4ff);
+    }
+  }
+
   const cur = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const tgt = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const FIXED_COL = { WARMUP: 0xffb347, SURGE: 0xff8c3b, PULSE: 0xff4d5e, ZERO: 0xffffff };
@@ -400,6 +442,10 @@
   /* ---------- 初始化 / 主渲染 ---------- */
   function init(canvas) {
     if (!window.THREE) { document.body.classList.add('no3d'); return false; }
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.has('sunhour')) sunHourOverride = Math.min(24, Math.max(0, parseFloat(q.get('sunhour')) || 0));
+    } catch (_) {}
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -417,6 +463,7 @@
     scene.add(new THREE.AmbientLight(0x3a4a66, 0.9));
     const key = new THREE.DirectionalLight(0xffffff, 0.7); key.position.set(3, 5, 4); scene.add(key);
     scene.userData.keyLight = key;
+    moonLight = new THREE.DirectionalLight(0x8fb4ff, 0.2); moonLight.position.set(-3, -2, -4); scene.add(moonLight);
     const rim = new THREE.PointLight(0xff5d8f, 0.35, 30); rim.position.set(-5, -2, -3); scene.add(rim);
 
     buildCore(); buildRings(); buildOrbits(); buildParticles(); buildShafts(); buildShocks();
@@ -463,6 +510,8 @@
     cur.intensity += (tgt.intensity - cur.intensity) * k;
     cur.pSpeed += (tgt.pSpeed - cur.pSpeed) * k;
 
+    updateSun(ctx.epoch);   // 星球昼夜随真实时间转
+
     // 能量环
     ringMat.uniforms.uProgress.value = ctx.progress;
     ringMat.uniforms.uColor.value.copy(cur.color);
@@ -489,7 +538,7 @@
     atmo.scale.setScalar(ps);
     atmoMat.uniforms.uColor.value.copy(cur.color);
     atmoMat.uniforms.uOp.value = 0.9 + cur.intensity * 0.6 + ctx.pulse * 0.9;
-    scene.userData.keyLight.intensity = 0.55 + cur.intensity * 0.25;
+    // key 光强度已由 updateSun 按昼夜调制，这里不再覆盖
 
     // 轨道
     for (let i = 0; i < orbits.length; i++) {
@@ -568,5 +617,17 @@
     renderer.render(scene, camera);
   }
 
-  TC.Scene = { init, render, setHue, get hue() { return hue; } };
+  TC.Scene = {
+    init, render, setHue, get hue() { return hue; },
+    // 调试探针：真实太阳状态（测试/截图验证用，无 UI 暴露）
+    debugSun() {
+      const k = scene && scene.userData.keyLight;
+      return k ? {
+        pos: k.position.toArray().map(v => Math.round(v * 100) / 100),
+        intensity: Math.round(k.intensity * 1000) / 1000,
+        moon: moonLight ? Math.round(moonLight.intensity * 1000) / 1000 : null,
+        override: sunHourOverride
+      } : null;
+    }
+  };
 })();

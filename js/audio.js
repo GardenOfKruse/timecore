@@ -22,7 +22,11 @@
         ctx = new AC();
         master = ctx.createGain();
         master.gain.value = muted ? 0 : vol * 0.9;
-        master.connect(ctx.destination);
+        // 压缩器兜底：到点音景多层叠加/提示音同响时防爆音（透明，正常听感不变）
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -10; comp.knee.value = 24; comp.ratio.value = 6;
+        comp.attack.value = 0.003; comp.release.value = 0.25;
+        master.connect(comp); comp.connect(ctx.destination);
         let tv = {};
       try { tv = JSON.parse(localStorage.getItem('tc.track') || '{}'); } catch (_) {}
       ['beat', 'cue', 'hit'].forEach(k => {
@@ -51,7 +55,7 @@
   function anchor() { if (ctx) anchored = { t: ctx.currentTime, e: TC.time.epoch() }; }
   function tFor(e) { if (!anchored) anchor(); return anchored.t + (e - anchored.e) / 1000; }
 
-  function osc(type, f0, f1, t0, dur, peak, cat) {
+  function osc(type, f0, f1, t0, dur, peak, cat, pan) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type;
     o.frequency.setValueAtTime(Math.max(1, f0), t0);
@@ -59,7 +63,9 @@
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(peak, t0 + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect((cat && tracks[cat]) || master);
+    let tail = g;
+    if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.min(1, Math.max(-1, pan)); g.connect(p); tail = p; }
+    o.connect(g); tail.connect((cat && tracks[cat]) || master);
     o.start(t0); o.stop(t0 + dur + 0.05);
     queued.push({ src: o, t0, cat: cat || 'master' });
   }
@@ -98,9 +104,23 @@
       osc('sine', f * 2, f * 2, t, 0.07, 0.10, 'beat');
     },
     fire(t) {
-      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => osc('triangle', f, f, t + i * 0.02, 0.9, 0.20, 'cue'));
-      osc('sine', 70, 38, t, 0.5, 0.5, 'cue');
-      noise(t, 0.7, 0.28, 3200, 0.6, 'cue');
+      // 到点音景（signature moment）三层：
+      // ① sub 冲击：下坠正弦 + 二次谐波体 + 低频砰，撑起「释放」的物理感
+      osc('sine', 82, 36, t, 0.9, 0.55, 'cue');
+      osc('sine', 120, 60, t + 0.02, 0.35, 0.28, 'cue');
+      noise(t, 0.5, 0.20, 180, 0.8, 'cue');
+      noise(t, 0.9, 0.20, 4200, 0.5, 'cue');   // 高频空气感，拉出空间
+      // ② 五声音阶琶音（C D E G A C…）逐音上扬，左右声像交替展开 + 镜像泛音 + 反声像幽灵回声
+      const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5];
+      PENTA.forEach((f, i) => {
+        const tt = t + 0.03 + i * 0.055;
+        const pan = (i % 2 ? 1 : -1) * Math.min(0.7, 0.25 + i * 0.06);
+        osc('triangle', f, f, tt, 0.8 - i * 0.04, 0.16 - i * 0.008, 'cue', pan);
+        osc('sine', f * 2, f * 2, tt + 0.01, 0.4, 0.05, 'cue');
+        osc('triangle', f, f, tt + 0.19, 0.5, 0.05, 'cue', -pan);
+      });
+      // ③ 高频钟簇慢衰减：闪光之后的余韵
+      [2637, 3136, 3520].forEach((f, i) => osc('sine', f, f * 0.995, t + 0.25 + i * 0.09, 1.8, 0.045, 'cue'));
     },
     whooshUp() { if (!ready()) return; const t = ctx.currentTime; noise(t, 0.5, 0.14, 600, 0.8); osc('sine', 220, 660, t, 0.5, 0.10); },
     whooshHi() { if (!ready()) return; const t = ctx.currentTime; noise(t, 0.4, 0.18, 1400, 0.9); osc('sawtooth', 330, 880, t, 0.35, 0.07); },
@@ -190,12 +210,9 @@
     },
     // 测试/调试钩子：手动以指定预排窗口跑一次调度器（验证批量机制）
     debugSched(lookMs) { if (ensure()) scheduleCd(TC.time.epoch(), lookMs || 220); },
-    get softLead() { return softLead; },
-    setSoftLead(v) { softLead = clampInt(parseInt(v, 10), 3, 60, 10); localStorage.setItem('tc.softlead', String(softLead)); },
     setMute(m) { muted = !!m; localStorage.setItem('tc.mute', m ? '1' : '0'); if (master) master.gain.value = muted ? 0 : vol * 0.9; TC.bus.emit('mute', muted); },
     setVolume(v) { vol = clampNum(v, 0, 1, 0.8); localStorage.setItem('tc.vol', String(vol)); if (master && !muted) master.gain.value = vol * 0.9; },
     setTick(on) { tickOn = !!on; localStorage.setItem('tc.tick', on ? '1' : '0'); },
-    get softLead() { return softLead; },
     setSoftLead(v) { softLead = clampNum(parseInt(v, 10), 3, 60, 10); localStorage.setItem('tc.softlead', String(softLead)); },
     track(cat) { return tracks[cat] ? tracks[cat].gain.value : 1; },
     setTrack(cat, v) { if (tracks[cat]) { tracks[cat].gain.value = Math.min(1, Math.max(0, v)); let tv = {}; try { tv = JSON.parse(localStorage.getItem('tc.track') || '{}'); } catch (_) {} tv[cat] = tracks[cat].gain.value; localStorage.setItem('tc.track', JSON.stringify(tv)); } }
