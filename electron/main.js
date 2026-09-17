@@ -100,6 +100,7 @@ function createWindow() {
     transparent: true,
     backgroundColor: '#00000000',
     fullscreenable: true,
+    show: false,   // 开场仪式：渲染就绪再显示，避免空窗闪现
     title: 'TIMECORE',
     icon: pathM.join(__dirname, '..', 'build', 'icon.ico'),
     webPreferences: {
@@ -108,6 +109,7 @@ function createWindow() {
       nodeIntegration: false
     }
   });
+  win.once('ready-to-show', () => { if (win && !win.isDestroyed()) win.show(); });
   win.setAlwaysOnTop(true, 'screen-saver');
   // 位置/尺寸记忆：拖动、拉伸去抖保存（全屏期间由 saveBounds 自行跳过）
   win.on('resize', saveBoundsSoon);

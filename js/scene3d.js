@@ -468,6 +468,8 @@
 
     buildCore(); buildRings(); buildOrbits(); buildParticles(); buildShafts(); buildShocks();
     setPhase('IDLE'); cur.color.copy(tgt.color);
+    // 能量唤醒：核心从熄灭状态充能到待机（约 1s 缓升，靠主循环 lerp 完成）
+    cur.intensity = 0; cur.pSpeed = 0.2;
     wireEvents();
 
     window.addEventListener('resize', onResize);

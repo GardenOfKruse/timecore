@@ -524,6 +524,13 @@ body.clockmode .clock-panel.zero-pulse { animation: clockPulse 0.55s cubic-bezie
 body.clockmode .clock-panel.zero-pulse::before { animation: none; opacity: 0.55; border-color: rgba(255, 255, 255, 0.6); }
 @keyframes clockPulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
 
+/* 开场仪式：内容整体淡入（配合主进程 ready-to-show 再显示，通电感） */
+body { animation: bootIn 0.32s ease-out; }
+@keyframes bootIn { from { opacity: 0; } }
+/* 欢迎卡入场 */
+.wl-card { animation: wlIn 0.3s cubic-bezier(0.2, 0.7, 0.3, 1); }
+@keyframes wlIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } }
+
 /* 首次进入操作提示（3.5s 自动消失，之后记住不再显示） */
 #face-hint {
   position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%);
