@@ -91,6 +91,18 @@ const mAct = await waitJs(`TC.Scene.debugSun().meteorActive === true`, 1500);
 const mEnd = await waitJs(`TC.Scene.debugSun().meteorActive === false`, 2500);
 check('流星：强制触发 → 0.9s 后结束', mAct && mEnd, { mAct, mEnd });
 
+// C2: 场景交互——横向拖拽改变相机方位，且拖拽结束不残留拖动态
+const viewDrag = JSON.parse(await js(`(() => {
+  const c = document.getElementById('scene');
+  const before = TC.Scene.debugView();
+  c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, button: 0, clientX: 400, clientY: 300 }));
+  c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 31, buttons: 1, clientX: 520, clientY: 300 }));
+  c.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, button: 0, clientX: 520, clientY: 300 }));
+  const after = TC.Scene.debugView();
+  return JSON.stringify({ before, after, changed: Math.abs(after.targetYaw - before.targetYaw) > 0.5 });
+})()`));
+check('星球横向拖拽：相机方位可环绕 360°', viewDrag.changed && viewDrag.after.canvas === true && viewDrag.after.dragging === false, viewDrag);
+
 // D: 钟面秒环——存在、随毫秒推进
 await js(`electronAPI.send('size', { preset: 'clock' })`);
 await waitJs(`document.body.classList.contains('clockmode')`);
@@ -106,7 +118,7 @@ check('秒环：存在且随毫秒推进', ring.exists && ring.moved, ring);
 
 // E: 零点脉动——钟面形态下归零触发 zero-pulse（bus 收据 + 面板类双重取证）
 const zp = await js(`(async () => {
-  window.__z31 = { bus: false, cls: false };
+  window.__z31 = { bus: false, cls: false, armedStyle: false };
   TC.bus.on('cd:zero', () => { window.__z31.bus = true; if (document.body.classList.contains('clockmode')) {
     const p2 = document.querySelector('.clock-panel');
     if (p2) window.__z31.cls = true;
@@ -115,6 +127,7 @@ const zp = await js(`(async () => {
   await new Promise(r2 => setTimeout(r2, 800));
   TC.Countdown.startSingle(TC.time.epoch() + 4000);   // 绝对目标 4s 后：确保归零发生在重进钟面之后
   await new Promise(r2 => setTimeout(r2, 700));
+  window.__z31.armedStyle = document.querySelector('.clock-panel').classList.contains('clock-armed');
   electronAPI.send('size', { preset: 'clock' });
   await new Promise(r2 => setTimeout(r2, 600));
   const deadline = Date.now() + 7000;
@@ -125,7 +138,7 @@ const zp = await js(`(async () => {
   }
   return JSON.stringify(window.__z31);
 })()`);
-check('零点脉动：cd:zero 触发且钟面在形态中加类', JSON.parse(zp).bus === true && JSON.parse(zp).cls === true, zp);
+check('零点脉动：cd:zero 触发且钟面布防态生效', JSON.parse(zp).bus === true && JSON.parse(zp).cls === true && JSON.parse(zp).armedStyle === true, zp);
 
 // F: 钟面缩放记忆——放大后退出再进入保持宽度（先确保从主窗口开始）
 if (await js(`document.body.classList.contains('clockmode')`)) {
@@ -136,6 +149,12 @@ await sleep(500);
 await js(`electronAPI.send('size', { preset: 'clock' })`);
 await waitJs(`document.body.classList.contains('clockmode')`);
 await sleep(600);
+const dragBaseW = await js(`innerWidth`);
+await js(`electronAPI.send('move-begin'); electronAPI.send('clock-zoom', -1)`);
+await sleep(220);
+const dragGuardW = await js(`innerWidth`);
+await js(`electronAPI.send('move-end')`);
+check('拖拽期间误发 wheel 不触发缩放', dragGuardW === dragBaseW, { dragBaseW, dragGuardW });
 await js(`electronAPI.send('clock-zoom', -1)`);
 await waitJs(`innerWidth > 300 && innerWidth < 320`);
 const w1 = await js(`innerWidth`);

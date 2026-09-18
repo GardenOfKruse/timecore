@@ -352,9 +352,9 @@
     window.addEventListener('pointerdown', e => {
       if (e.target && e.target.id === 'scene') {
         TC.Audio.unlock();
-        TC.Beats.hit(TC.time.epoch());
       }
     });
+    window.addEventListener('tc:scene-click', () => TC.Beats.hit(TC.time.epoch()));
     // 浏览器模式：HTML 全屏状态变化时同步按钮高亮
     document.addEventListener('fullscreenchange', () => syncFullscreenBtn(!!document.fullscreenElement));
 

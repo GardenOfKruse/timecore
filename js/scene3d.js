@@ -2,7 +2,7 @@
  * 玻璃环体 + 内核 + 能量环(shader) + 金属轨道 + 粒子 + 体积光 + 冲击波
  * 全部基于 r128 全局 THREE，无后处理依赖 */
 (function () {
-  let renderer, scene, camera, t = 0;
+  let renderer, scene, camera, t = 0, sceneCanvas;
   let coreGroup, planet, clouds, atmo, atmoMat, flash, ringGroup, ringMat, tipGlow, warmRing, warmMat;
   let orbits = [], sats = [], points, pPos, pVel, pCount, pMat;
   let shafts = [], shocks = [], shockIdx = 0;
@@ -11,6 +11,8 @@
   let quality = 2;                      // 2 高 / 1 中 / 0 低
   let fpsAcc = 0, fpsN = 0, fpsTimer = 0;
   const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+  let viewYaw = 0, viewYawTarget = 0;
+  const scenePointer = { active: false, moved: false, x: 0, y: 0, id: null };
 
   /* 真实太阳：key 光绕星球按当地（或当前显示）时区的时刻旋转
    * 12:00 正对镜头照亮面向用户的一侧，00:00 转到背面=夜半球，靠冷色月光补光。
@@ -538,6 +540,8 @@
       const q = new URLSearchParams(location.search);
       if (q.has('sunhour')) sunHourOverride = Math.min(24, Math.max(0, parseFloat(q.get('sunhour')) || 0));
     } catch (_) {}
+    sceneCanvas = canvas;
+    canvas.style.touchAction = 'none';
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -570,6 +574,36 @@
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = (e.clientY / window.innerHeight) * 2 - 1;
     });
+    canvas.addEventListener('pointerdown', e => {
+      if (e.button !== 0 || document.body.classList.contains('clockmode')) return;
+      scenePointer.active = true;
+      scenePointer.moved = false;
+      scenePointer.x = e.clientX;
+      scenePointer.y = e.clientY;
+      scenePointer.id = e.pointerId;
+      try { canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!scenePointer.active || e.pointerId !== scenePointer.id) return;
+      const dx = e.clientX - scenePointer.x;
+      const dy = e.clientY - scenePointer.y;
+      if (!scenePointer.moved && Math.hypot(dx, dy) < 6) return;
+      if (!scenePointer.moved) scenePointer.moved = true;
+      scenePointer.x = e.clientX;
+      scenePointer.y = e.clientY;
+      viewYawTarget -= dx * 0.009;
+      e.preventDefault();
+    });
+    const endScenePointer = e => {
+      if (!scenePointer.active || e.pointerId !== scenePointer.id) return;
+      try { canvas.releasePointerCapture?.(e.pointerId); } catch (_) {}
+      const clicked = !scenePointer.moved;
+      scenePointer.active = false;
+      scenePointer.id = null;
+      if (clicked) window.dispatchEvent(new CustomEvent('tc:scene-click'));
+    };
+    canvas.addEventListener('pointerup', endScenePointer);
+    canvas.addEventListener('pointercancel', endScenePointer);
     onResize();
     return true;
   }
@@ -725,8 +759,10 @@
     mouse.sy += (mouse.y - mouse.sy) * (1 - Math.exp(-dt * 2.5));
     shake *= Math.exp(-dt * 3.2);
     const sx = (Math.random() - 0.5) * shake * 0.09, sy = (Math.random() - 0.5) * shake * 0.09;
-    camera.position.x = mouse.sx * 0.45 + sx;
+    viewYaw += (viewYawTarget - viewYaw) * (1 - Math.exp(-dt * 8));
+    camera.position.x = Math.sin(viewYaw) * 7.4 + mouse.sx * 0.45 + sx;
     camera.position.y = 0.35 - mouse.sy * 0.3 + sy;
+    camera.position.z = Math.cos(viewYaw) * 7.4;
     camera.lookAt(0, 0, 0);
 
     renderer.render(scene, camera);
@@ -749,6 +785,7 @@
         trails: sats.filter(s => s.trail && s.trail.visible).length
       } : null;
     },
-    meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; }
+    meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },
+    debugView() { return { yaw: viewYaw, targetYaw: viewYawTarget, dragging: scenePointer.active && scenePointer.moved, canvas: !!sceneCanvas }; }
   };
 })();

@@ -65,6 +65,15 @@
   const el = { pairs: {} };
   const last = { h: '', m: '', s: '', day: '' };
 
+  function setCountdownPhase(phase) {
+    const panel = document.querySelector('.clock-panel');
+    if (!panel) return;
+    const ph = phase || 'IDLE';
+    panel.classList.remove('clock-armed', 'clock-phase-normal', 'clock-phase-warmup', 'clock-phase-surge', 'clock-phase-pulse', 'clock-phase-zero');
+    if (ph === 'IDLE') return;
+    panel.classList.add('clock-armed', 'clock-phase-' + ph.toLowerCase());
+  }
+
   TC.bus.on('boot', () => {
     el.hms = TC.$('clock-hms');
     // 拆成 HH : MM : SS 三对数字 + 冒号（textContent 仍为 "HH:MM:SS"，测试断言不受影响）
@@ -85,8 +94,15 @@
     el.ms = TC.$('clock-ms');
     el.date = TC.$('clock-date');
     el.ring = document.querySelector('.sec-ring rect');
+    TC.bus.on('phase', setCountdownPhase);
+    TC.bus.on('cd:start', () => setCountdownPhase('NORMAL'));
+    TC.bus.on('cd:advance', () => setCountdownPhase('NORMAL'));
+    TC.bus.on('cd:stop', () => setCountdownPhase('IDLE'));
+    TC.bus.on('cd:done', () => setCountdownPhase('IDLE'));
+    setCountdownPhase(TC.Countdown.info().phase);
     // 零点脉动：钟面形态下倒计时归零，整窗呼吸一次
     TC.bus.on('cd:zero', () => {
+      setCountdownPhase('ZERO');
       if (!document.body.classList.contains('clockmode')) return;
       const panel = document.querySelector('.clock-panel');
       if (!panel) return;

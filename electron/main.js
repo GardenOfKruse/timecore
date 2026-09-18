@@ -29,6 +29,7 @@ let moveStart = null;
 function beginMove() {
   if (!win) return;
   cancelTween();   // 拖动优先，缓动让路
+  twLast = null;   // 拖动与缩放完全解耦，不能沿用上一次滚轮目标
   moveStart = { c: screen.getCursorScreenPoint(), b: win.getBounds() };
   clearInterval(moveTimer);
   moveTimer = setInterval(() => {
@@ -37,7 +38,7 @@ function beginMove() {
     win.setPosition(moveStart.b.x + c.x - moveStart.c.x, moveStart.b.y + c.y - moveStart.c.y);
   }, 16);
 }
-function endMove() { clearInterval(moveTimer); moveTimer = null; }
+function endMove() { clearInterval(moveTimer); moveTimer = null; moveStart = null; }
 
 /* 窗口缓动：形态切换/滚轮缩放不再一步跳变（easeOutCubic ~170ms，步进 16ms）。
  * 可重定向——滚轮连滚时在逻辑目标上累乘、动画只负责追赶显示；
@@ -189,7 +190,7 @@ function applyPreset(p) {
   tweenBounds({ x, y, width: w, height: h });
 }
 function zoomClock(delta) {
-  if (!win || !clockMode) return;
+  if (!win || !clockMode || moveTimer) return; // 拖拽期间即使收到误发 wheel 也不得缩放
   const ratio = PRESETS.clock[0] / PRESETS.clock[1];
   const minW = 160, maxW = 1180;
   // 连滚基准取逻辑目标（而非动画途中的实际 bounds），尺寸序列与逐次到位完全一致

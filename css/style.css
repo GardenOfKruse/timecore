@@ -525,6 +525,19 @@ body.clockmode .clock-panel.zero-pulse { animation: clockPulse 0.55s cubic-bezie
 body.clockmode .clock-panel.zero-pulse::before { animation: none; opacity: 0.55; border-color: rgba(255, 255, 255, 0.6); }
 @keyframes clockPulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
 
+/* 布防态：边框作为状态轨道，只改变边框色/透明度和节奏，不新增装饰性辉光 */
+body.clockmode .clock-panel.clock-armed { border-color: rgba(57, 215, 255, 0.42); }
+body.clockmode .clock-panel.clock-phase-warmup { border-color: rgba(255, 179, 71, 0.62); }
+body.clockmode .clock-panel.clock-phase-surge { border-color: rgba(255, 140, 59, 0.72); }
+body.clockmode .clock-panel.clock-phase-pulse { border-color: rgba(255, 77, 94, 0.82); }
+body.clockmode .clock-panel.clock-phase-zero { border-color: rgba(255, 255, 255, 0.9); }
+body.clockmode .clock-phase-warmup .sec-ring { stroke: var(--warm); animation: clockTrackBreath 1.8s ease-in-out infinite; }
+body.clockmode .clock-phase-surge .sec-ring { stroke: var(--hot); animation: clockTrackBreath 0.9s ease-in-out infinite; }
+body.clockmode .clock-phase-pulse .sec-ring { stroke: var(--pulse); animation: clockTrackPulse 0.42s ease-in-out infinite; }
+body.clockmode .clock-phase-zero .sec-ring { stroke: #fff; stroke-opacity: 1; animation: none; }
+@keyframes clockTrackBreath { 0%, 100% { stroke-opacity: 0.62; } 50% { stroke-opacity: 0.96; } }
+@keyframes clockTrackPulse { 0%, 100% { stroke-opacity: 0.62; } 50% { stroke-opacity: 1; } }
+
 /* 开场仪式：内容整体淡入（配合主进程 ready-to-show 再显示，通电感） */
 body { animation: bootIn 0.32s ease-out; }
 @keyframes bootIn { from { opacity: 0; } }
