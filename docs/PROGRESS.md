@@ -242,7 +242,7 @@
 - 已完成：新增 cycle31 场景交互回归；既有拖拽缩放、太阳、流星、秒环、零点脉动、缩放记忆、钟面零渲染共 10/10 通过。
 - 已完成：重做钟面布防动效为单一 ClockMotion/WAAPI 控制器：真实 DOM 呼吸边驱动主拍、时间数字做次拍；NORMAL/WARMUP/SURGE/PULSE 只改变节奏与状态色，秒环保持稳定；ZERO 单次释放，退出/停止立即取消。
 - 已完成：cycle31 的“钟面布防态生效”改为读取 `TC.Clock.debugMotion()`，确认真实动画对象存在，不再用 CSS.supports 或伪元素样式冒充运行证据。
-- 已完成：本轮改动定版为 v1.5.3，待提交并按唯一 draft Release 流程发布。
+- 已完成：Release v1.5.3 已正式发布（latest=v1.5.3、draft=False、唯一匹配 Release、3 个构建产物），发布说明已写入 GitHub。
 - 下一步命令：`npm start`，主窗口拖动背景星球左右旋转；确认旋转手感后再决定是否发版。
 - 发布教训：electron-builder/CI 已会为 tag 自动创建 draft；正式发布只能 PATCH 该 draft 为 `draft:false`，不能另行 POST 创建同 tag Release，否则会产生重复 Release。修复时删除错误 Release、重推 tag，再按旧流程处理。
 - 本轮修复：钟面拖动增加渲染层 `dragActive` wheel 闸门，真实拖动期间不再发送缩放 IPC；星球镜头由单轴 yaw 改为带 ±66° 俯仰限制的球面 yaw/pitch 轨道，支持上下左右拖拽。
