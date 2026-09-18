@@ -136,7 +136,7 @@
   - winCodeSign 缓存若报符号链接权限：手动 `7za x -snld <hash>.7z -o winCodeSign-2.6.0`，darwin dylib 占位文件用真实 dylib 拷贝补全
   - dist*/win-unpacked/app.asar 常被 Defender 瞬时锁死 → **轮换输出目录**（dist4~dist10 已用，均 gitignore）
 - **发版**：改 package.json version → commit push → `git tag vX.Y.Z && git push origin vX.Y.Z` → CI（GitHub Actions release.yml）自动创建唯一草稿 Release → CI 成功后查询该 tag 对应的 Release，使用 UTF-8 JSON 文件 `--data-binary` **PATCH 现有 draft 的 `draft:false`**（禁止额外 POST 创建同 tag Release）→ 验证 `releases/latest`。若误生成重复 Release，先按 Release ID 删除错误项，再删除并重推同名 tag 重新触发旧流程。gh CLI 不存在，用 `git credential fill` 取 token（零回显）。
-- 提交身份：仓库级 GardenOfKruse + noreply 邮箱（**勿用全局 git 配置**，那是 Gitee 身份 CN-Yi）。
+- 提交身份：仓库级 GardenOfKruse + noreply 邮箱（勿用全局 git 配置——保持账号隔离）。
 - **git add -A 红线**：dist*/ 必须在 .gitignore（曾两次险些提交 82MB 产物，一次已进历史靠重写挽回）。
 
 ## 7. 待办池（未承诺）
