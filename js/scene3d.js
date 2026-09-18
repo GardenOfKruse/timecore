@@ -84,6 +84,27 @@
     scene.userData.moonPhase = st;
   }
 
+  /* ---------- 一日进度环（v1.7.1）：秒环的日尺度对应，扁平非加色，严守辉光配额 ---------- */
+  let dayRing = null, dayRingFrac = -1;
+  function buildDayRing() {
+    dayRing = new THREE.Mesh(
+      new THREE.RingGeometry(4.75, 4.85, 160, 1, Math.PI / 2, 0),
+      new THREE.MeshBasicMaterial({ color: 0x39d7ff, transparent: true, opacity: 0.10, blending: THREE.NormalBlending, side: THREE.DoubleSide, depthWrite: false })
+    );
+    scene.add(dayRing);
+  }
+  function updateDayRing(e) {
+    if (!dayRing) return;
+    const tz = (window.TC && TC.Clock) ? TC.Clock.tz : 'local';
+    const { frac } = TimeCoreDomain.dayProgress(sunHour(tz, e));
+    scene.userData.dayFrac = frac;
+    if (Math.abs(frac - dayRingFrac) < 0.00005) return;   // 一日尺度，约 4s 才需要重建一次弧
+    dayRingFrac = frac;
+    dayRing.geometry.dispose();
+    // 顶部起顺时针填充，与能量环/钟面秒环同语
+    dayRing.geometry = new THREE.RingGeometry(4.75, 4.85, 160, 1, Math.PI / 2 - frac * Math.PI * 2, frac * Math.PI * 2);
+  }
+
   const cur = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const tgt = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const FIXED_COL = { WARMUP: 0xffb347, SURGE: 0xff8c3b, PULSE: 0xff4d5e, ZERO: 0xffffff };
@@ -587,7 +608,7 @@
     const rim = new THREE.PointLight(0xff5d8f, 0.35, 30); rim.position.set(-5, -2, -3); scene.add(rim);
 
     buildCore(); buildRings(); buildOrbits(); buildParticles(); buildShafts(); buildShocks();
-    buildStars(); buildMeteor(); buildMoon();
+    buildStars(); buildMeteor(); buildMoon(); buildDayRing();
     setPhase('IDLE'); cur.color.copy(tgt.color);
     // 能量唤醒：核心从熄灭状态充能到待机（约 1s 缓升，靠主循环 lerp 完成）
     cur.intensity = 0; cur.pSpeed = 0.2;
@@ -670,6 +691,7 @@
 
     updateSun(ctx.epoch);   // 星球昼夜随真实时间转
     updateMoon(ctx.epoch);  // 月亮按真实朔望周期绕行
+    updateDayRing(ctx.epoch);   // 一日进度环随本地时间填充
     if (starMat) {
       starMat.uniforms.uTime.value = t;
       starMat.uniforms.uBoost.value += (1 - starMat.uniforms.uBoost.value) * (1 - Math.exp(-dt * 1.8));   // 增亮后缓慢回落
@@ -808,7 +830,8 @@
         stars: !!stars && stars.visible, meteorActive: meteorT >= 0,
         skipStreak: hiddenFrames,
         lastFrame: lastFrameInfo,
-        trails: sats.filter(s => s.trail && s.trail.visible).length
+        trails: sats.filter(s => s.trail && s.trail.visible).length,
+        dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },

@@ -100,6 +100,14 @@ check('满月：方位背太阳 + phase≈0.5', Math.abs(d3.phase - 0.5) < 0.01 
 const s = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
 check('太阳探针不受影响', !!s && s.override === null && s.stars === true, s);
 
+// F/G: 一日进度环——随 ?sunhour 同步填充
+await reloadWith('sunhour=21');
+const s21 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+check('一日进度环：21 时 → 0.875', s21.dayFrac === 0.875 && s21.override === 21, s21);
+await reloadWith('sunhour=6');
+const s6 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+check('一日进度环：06 时 → 0.25', s6.dayFrac === 0.25 && s6.override === 6, s6);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);
