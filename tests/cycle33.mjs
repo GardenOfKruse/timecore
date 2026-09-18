@@ -115,6 +115,19 @@ const dMorn = await dpAt(8), dDay = await dpAt(12), dEve = await dpAt(20), dNigh
 check('音景昼夜四态：08晨/12昼/20暮/02夜', dMorn.key === 'morning' && dDay.key === 'day' && dEve.key === 'evening' && dNight.key === 'night', { m: dMorn.key, d: dDay.key, e: dEve.key, n: dNight.key });
 check('四态频率表互异且 8 音', new Set([dMorn, dDay, dEve, dNight].map(x => x.rootHz)).size === 4 && [dMorn, dDay, dEve, dNight].every(x => x.freqs.length === 8), { roots: [dMorn.rootHz, dDay.rootHz, dEve.rootHz, dNight.rootHz] });
 
+// I: 每日击拍统计——自由节拍下真实击拍入库 + 抽屉展示
+const st0 = JSON.parse(await js(`JSON.stringify(TC.Beats.debugStats())`));
+const beatRec = JSON.parse(await js(`(async () => {
+  TC.Beats.toggleFreerun(true);
+  await new Promise(r2 => setTimeout(r2, 120));
+  const rec = TC.Beats.hit(TC.time.epoch());
+  TC.Beats.toggleFreerun(false);
+  return JSON.stringify({ label: rec ? rec.label : null });
+})()`));
+const st1 = JSON.parse(await js(`JSON.stringify(TC.Beats.debugStats())`));
+const domTxt = await js(`document.getElementById('beat-stats').textContent`);
+check('每日击拍统计：击拍入库 +1 + 抽屉展示', beatRec.label !== null && st1.today && st1.today.count === (st0.today ? st0.today.count : 0) + 1 && /今日击拍 \d/.test(domTxt), { label: beatRec.label, c0: st0.today && st0.today.count, c1: st1.today && st1.today.count, domTxt });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);
