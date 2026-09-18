@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/moon-phase.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/scene/moon-phase.ts"]
+}

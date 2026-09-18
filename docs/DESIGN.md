@@ -100,6 +100,7 @@
 - 阶段色：WARMUP #ffb347 / SURGE #ff8c3b / PULSE #ff4d5e / ZERO #fff；accent #39d7ff；面板 rgba(9,15,27,.46) 玻璃 + backdrop blur。
 - 3D 中心：程序化星球（值噪声大陆+云层+大气 BackSide shader），节拍弹跳，粒子 30fps 限频（dt 累积器），震屏为 camera 位移。
 - **真实太阳（v1.3.1）**：key 光方位角按显示时区的真实时刻绕星球转（12:00 正面 / 00:00 背面），高度角艺术定值 2.6；强度 = 昼夜因子 day × 阶段因子；晨昏带色温偏暖；夜半球由反向冷色月光补光。?sunhour=N 固定时刻（测试/截图），TC.Scene.debugSun() 探针。
+- **真实月相（v1.7.0）**：行星外圈 0.14 半径小月亮按 29.53 天朔望周期绕行（4.4 单位倾斜轨道），明暗面由同一把太阳 key 光照出，新月始终位于日地连线上、满月背向太阳；纯计算在 `src/domain/scene/moon-phase.ts`（2000-01-06 参考新月 + 2024 双天文锚点校准）。?moonage=N 固定月龄（测试/截图），TC.Scene.debugMoon() 探针（azimuthDot：新月 1/上弦 0/满月 −1）。
 - **卫星尾迹（v1.4.0）**：两颗卫星按解析角速度回推 22 个渐隐加色点（约 1s 行程），随 pSpeed 变速自然伸缩；低画质隐藏。
 - **到点流星雨（v1.4.1）**：cd:zero 时星野 uBoost 瞬时 2.2 后指数回落（~2s），三颗流星 120/320/520ms 错峰齐落——与到点音景合成完整仪式；属瞬时辉光配额。
 - **星空生动化（v1.3.3）**：远景星野 320 颗（自定义点 shader，aPhase 错相慢闪烁，半径 22–44 球壳，低画质隐藏）+ 流星（30–90s 随机一颗，拉伸光斑 0.9s 划过，TC.Scene.meteor() 强制触发）。
@@ -118,7 +119,7 @@
 ## 5. 测试基建（tests/）
 
 - CDP 直连 Electron 渲染进程（`--remote-debugging-port=92XX`），`TC_TMP_PROFILE` 隔离 userData（**绝不碰真实配置**）。
-- cycle19 首启动/回归 23 项；cycle21 双发回归 9；cycle24 旧 adb 升级链路 8；cycle26 设备标注移除 6；cycle27 连点优化 7；cycle30 形态/悬浮钟/音频批量 17；cycle31 太阳/星空/秒环/缩放记忆 11；cycle32 钟面长按缩放安全 2。
+- cycle19 首启动/回归 23 项；cycle21 双发回归 9；cycle24 旧 adb 升级链路 8；cycle26 设备标注移除 6；cycle27 连点优化 7；cycle30 形态/悬浮钟/音频批量 17；cycle31 太阳/星空/秒环/缩放记忆 11；cycle32 钟面长按缩放安全 2；cycle33 真实月相 5。
 - 领域契约：`tests/*.test.cjs` 36 文件 674 断言，`npm run test:domain`（先 build:domain 再全量）；发版前全量：`for t in 19 21 24 26 27 30 31 32; do node tests/cycle$t.mjs; done`
 - **已知坑**：
   - 真实鼠标必须 `Input.dispatchMouseEvent`（合成 dispatchEvent 绕过输入管线——拖拽区 BUG 就是这么漏测的）

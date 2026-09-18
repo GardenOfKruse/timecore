@@ -46,6 +46,7 @@
     const tz = (window.TC && TC.Clock) ? TC.Clock.tz : 'local';
     const h = sunHour(tz, e);
     const az = ((h - 12) / 24) * Math.PI * 2;      // 12:00 → 0（正面）
+    scene.userData.sunAz = az;
     const R = 6.2;
     scene.userData.keyLight.position.set(Math.sin(az) * R, 2.6, Math.cos(az) * R);
     if (moonLight) moonLight.position.set(-Math.sin(az) * R, -1.6, -Math.cos(az) * R);
@@ -58,6 +59,29 @@
       moonLight.intensity = (1 - day) * 0.55;
       moonLight.color.setHex(0x8fb4ff);
     }
+  }
+
+  /* ---------- 真实月相（v1.7.0）：明暗面由太阳 key 光照出，29.53 天朔望周期 ---------- */
+  let moon = null;
+  function moonEpoch(e) {
+    const m = /moonage=([0-9.]+)/.exec(location.search);   // 测试覆盖：?moonage=距参考新月天数
+    return m ? TimeCoreDomain.MOON_REFERENCE_NEW_MOON_MS + parseFloat(m[1]) * 86400000 : e;
+  }
+  function buildMoon() {
+    moon = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 32, 24),
+      new THREE.MeshStandardMaterial({ color: 0xd8d9e0, roughness: 0.95, metalness: 0.02, emissive: 0x0a0c14, envMapIntensity: 0.4 })
+    );
+    scene.add(moon);
+  }
+  function updateMoon(e) {
+    if (!moon || !scene.userData.keyLight) return;
+    const st = TimeCoreDomain.moonPhase(moonEpoch(e));
+    const a = (scene.userData.sunAz || 0) + st.angleRad;   // 新月居日地连线上，满月背向太阳
+    const R = 4.4;
+    moon.position.set(Math.sin(a) * R, Math.sin(a) * R * 0.26 + 0.2, Math.cos(a) * R);   // 与太阳同参数化（sin,cos）
+    moon.rotation.y = a;                                    // 潮汐锁定姿态
+    scene.userData.moonPhase = st;
   }
 
   const cur = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
@@ -563,7 +587,7 @@
     const rim = new THREE.PointLight(0xff5d8f, 0.35, 30); rim.position.set(-5, -2, -3); scene.add(rim);
 
     buildCore(); buildRings(); buildOrbits(); buildParticles(); buildShafts(); buildShocks();
-    buildStars(); buildMeteor();
+    buildStars(); buildMeteor(); buildMoon();
     setPhase('IDLE'); cur.color.copy(tgt.color);
     // 能量唤醒：核心从熄灭状态充能到待机（约 1s 缓升，靠主循环 lerp 完成）
     cur.intensity = 0; cur.pSpeed = 0.2;
@@ -645,6 +669,7 @@
     cur.pSpeed += (tgt.pSpeed - cur.pSpeed) * k;
 
     updateSun(ctx.epoch);   // 星球昼夜随真实时间转
+    updateMoon(ctx.epoch);  // 月亮按真实朔望周期绕行
     if (starMat) {
       starMat.uniforms.uTime.value = t;
       starMat.uniforms.uBoost.value += (1 - starMat.uniforms.uBoost.value) * (1 - Math.exp(-dt * 1.8));   // 增亮后缓慢回落
@@ -787,6 +812,25 @@
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },
+    // 调试探针：真实月相状态（测试/截图验证用，无 UI 暴露）
+    debugMoon() {
+      const st = scene && scene.userData.moonPhase;
+      const k = scene && scene.userData.keyLight;
+      if (!moon || !st || !k) return null;
+      const mp = moon.position, sp = k.position;
+      const ml = Math.hypot(mp.x, mp.z) || 1, sl = Math.hypot(sp.x, sp.z) || 1;
+      const azimuthDot = (mp.x * sp.x + mp.z * sp.z) / (ml * sl);   // 方位角关系：新月≈1、满月≈-1、上弦≈0
+      const dot = (mp.x * sp.x + mp.y * sp.y + mp.z * sp.z) / (mp.length() * sp.length());
+      return {
+        phase: Math.round(st.phase * 10000) / 10000,
+        ageDays: Math.round(st.ageDays * 100) / 100,
+        waxing: st.waxing,
+        angleDeg: Math.round(st.angleRad * 180 / Math.PI * 10) / 10,
+        azimuthDot: Math.round(azimuthDot * 1000) / 1000,
+        litDot: Math.round(dot * 1000) / 1000,
+        visible: moon.visible
+      };
+    },
     debugView() { return { ...cameraMotion.state(), dragging: scenePointer.active && scenePointer.moved, canvas: !!sceneCanvas }; }
   };
 })();
