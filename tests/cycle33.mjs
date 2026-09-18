@@ -142,6 +142,15 @@ const hpBlocked = await js(`(async () => {
   return { denied, allowedAfter: TC.Scene.hourPulse() };
 })()`);
 check('整点深呼吸：布防期间让位、停止后恢复', hpBlocked.denied === false && hpBlocked.allowedAfter === true, hpBlocked);
+const hpHold = await js(`(async () => {
+  TC.Countdown.startSingle(TC.time.epoch() + 3500);   // 等到归零驻留期（armed 在驻留期仍为 true）
+  while (!TC.Countdown.info().fired) await new Promise(r2 => setTimeout(r2, 40));
+  const denied = TC.Scene.hourPulse();
+  TC.Countdown.stop();
+  await new Promise(r2 => setTimeout(r2, 200));
+  return denied;
+})()`);
+check('整点深呼吸：归零驻留期同样让位', hpHold === false, { hpHold });
 
 // K: 月相调制夜光——满月夜的月光补光强于新月夜（debugSun.moon 为 moonLight 强度）
 await reloadWith('sunhour=0&moonage=14.77');

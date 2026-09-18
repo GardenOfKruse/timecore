@@ -114,7 +114,7 @@
     if (!TimeCoreDomain.hourCrossed(lastHourEpoch, e)) return;
     lastHourEpoch = e;
     const cd = (window.TC && TC.Countdown) ? TC.Countdown.info() : null;
-    if (cd && cd.armed && !cd.fired) return;   // 布防期间让位给倒计时阶段表现
+    if (cd && cd.armed) return;   // 整个布防生命周期（含归零驻留期）都让位给倒计时表现；错过不补拍
     spawnShock(2.0, new THREE.Color(0x39d7ff), 0.35);
     kickParticles(4, 0.25);
     hourPulseCount++;
@@ -856,7 +856,7 @@
     // 测试钩子：强制触发一次整点深呼吸（真实整点边界等不起）
     hourPulse() {
       const cd = (window.TC && TC.Countdown) ? TC.Countdown.info() : null;
-      if (cd && cd.armed && !cd.fired) return false;   // 与真实路径同样的让位规则
+      if (cd && cd.armed) return false;   // 与真实路径同样的让位规则（含驻留期）
       spawnShock(2.0, new THREE.Color(0x39d7ff), 0.35);
       kickParticles(4, 0.25);
       hourPulseCount++;
