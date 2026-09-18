@@ -111,7 +111,7 @@
 
 ## 4. 架构
 
-- **零框架**：vanilla JS IIFE + TC 命名空间外壳；业务逻辑位于 TypeScript 模块层（v1.6.0 起）——`src/domain/` 纯计算、`src/application/` 跨模块编排、`src/adapters/` 浏览器/Electron 副作用，36 个模块各自经独立 runtime tsconfig 构建为 `js/generated/*.js` 由 `index.html` 按序加载；`js/*.js` 仅保留兼容桥接与 DOM/IPC 编排；three.js 仅 3D。
+- **零框架**：vanilla JS IIFE + TC 命名空间外壳；业务逻辑位于 TypeScript 模块层（v1.6.0 起）——`src/domain/` 纯计算、`src/application/` 跨模块编排、`src/adapters/` 浏览器/Electron 副作用，42 个模块经 `scripts/build-domain.mjs` 统一构建为 `js/generated/*.js` 由 `index.html` 按序加载；`js/*.js` 仅保留兼容桥接与 DOM/IPC 编排；three.js 仅 3D。
 - **双驱动循环**：rAF 只渲染 3D；逻辑与 DOM 由 66ms setInterval + 120ms 看门狗驱动（后台/隐藏不冻结）。
 - **钟面零渲染（v1.5.0）**：body.clockmode 时 render() 整帧早退（display:none 的 canvas 上 WebGL 仍跑全管线，实测 42 calls/1.7 万 tris/帧）——悬浮钟形态 GPU 近零；skipStreak/lastFrame 暴露于 TC.Scene.debugSun()。
 - **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；主进程 `win:state` 推送（形态/全屏/置顶变化即时下发）；adb:detect|exec|download。
