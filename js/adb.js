@@ -333,8 +333,6 @@
   });
 
   /* ---------- 面板 ---------- */
-  const el = {};
-
   function renderStatus() {
     refreshArmedBtn();
     syncGuide();
