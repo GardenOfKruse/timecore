@@ -128,7 +128,7 @@
   - Runtime.evaluate 需要 `awaitPromise: true`（否则 Promise 序列化为 {}）
   - 退出必须走 `electronAPI.send('close')`；`child.kill()` 硬终止丢 leveldb
   - 被杀任务会留僵尸 electron 占调试端口 → 换端口解锁
-  - 测试会改 docs/ 下截图（welcome.png），提交前 checkout 还原
+  - 测试截图写入 test-artifacts/（已 gitignore），不再触碰 docs/
 
 ## 6. 构建与发布
 

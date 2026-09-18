@@ -1,6 +1,6 @@
 /* 全屏/选点事件诊断（CDP） */
 import http from 'node:http';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 const PORT = process.argv[2] || 9223;
 
 http.get(`http://127.0.0.1:${PORT}/json`, res => {
@@ -85,8 +85,9 @@ http.get(`http://127.0.0.1:${PORT}/json`, res => {
       ws.addEventListener('message', h);
       setTimeout(() => reject(new Error('shot timeout')), 15000);
     });
-    writeFileSync(new URL('../docs/images/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
-    console.log('截图: docs/images/adb-e2e.png');
+    mkdirSync(new URL('../test-artifacts/', import.meta.url), { recursive: true });
+writeFileSync(new URL('../test-artifacts/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
+    console.log('截图: test-artifacts/adb-e2e.png');
 
     process.exit(0);
   });

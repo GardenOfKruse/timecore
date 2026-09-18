@@ -1,7 +1,7 @@
 /* ADB 齐射 E2E 驱动：通过 CDP 连接 Electron 渲染进程，驱动真实 adb 验证
  * 用法：TC_TMP_PROFILE 隔离 profile；先启动 electron --remote-debugging-port=9223，再 node tests/adb-e2e.mjs
  * 只执行只读命令（date/getprop/echo/screencap），不触碰手机屏幕 */
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 
 const PORT = 9223;
 let seq = 0;
@@ -220,7 +220,8 @@ const magMove = await cdpJson(`(() => {
 await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: magMove.x, y: magMove.y });
 await new Promise(r => setTimeout(r, 400));
 const shot = await call('Page.captureScreenshot', { format: 'png' });
-writeFileSync(new URL('../docs/images/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
-console.log('== 截图 == docs/images/adb-e2e.png');
+mkdirSync(new URL('../test-artifacts/', import.meta.url), { recursive: true });
+writeFileSync(new URL('../test-artifacts/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
+console.log('== 截图 == test-artifacts/adb-e2e.png');
 ws.close();
 process.exit(0);

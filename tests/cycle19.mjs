@@ -3,7 +3,7 @@
  * 用法：node tests/cycle19.mjs（自行拉起 electron，TC_TMP_PROFILE 隔离，不碰真实配置） */
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import path from 'node:path';
@@ -128,8 +128,9 @@ check('A 空闲态：开始/停止', s0.startTxt === '开始' && s0.stopDisabled
 check('A 标题栏状态灯存在', s0.lights, s0);
 
 const shot = await call('Page.captureScreenshot', { format: 'png' });
-writeFileSync(path.join(ROOT, 'docs', 'images', 'welcome.png'), Buffer.from(shot.data, 'base64'));
-console.log('== 截图 == docs/images/welcome.png');
+mkdirSync(path.join(ROOT, 'test-artifacts'), { recursive: true });
+writeFileSync(path.join(ROOT, 'test-artifacts', 'welcome.png'), Buffer.from(shot.data, 'base64'));
+console.log('== 截图 == test-artifacts/welcome.png');
 
 // 开始/停止状态化：10s 对齐 → 运行态；停止 → 空闲态
 await js(`document.querySelector('.chip-btn[data-sec="10"]').click()`);
