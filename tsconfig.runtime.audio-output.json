@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/audio-output.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/adapters/browser/audio-output.ts"]
+}

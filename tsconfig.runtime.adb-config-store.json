@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-config-store.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/adapters/browser/adb-config-store.ts"]
+}

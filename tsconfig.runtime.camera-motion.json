@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/camera-motion-model.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/scene/camera-motion-model.ts"]
+}

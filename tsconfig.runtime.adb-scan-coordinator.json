@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-scan-coordinator.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/application/adb/adb-scan-coordinator.ts"]
+}

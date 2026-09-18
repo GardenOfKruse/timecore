@@ -1,6 +1,6 @@
 {
   "name": "timecore",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "description": "TIMECORE · 悬浮式三维时间核心（时区时钟/绝对节点倒计时/网络校时/击拍判定/ADB 齐射）",
   "main": "electron/main.js",
   "author": "GardenOfKruse",
@@ -12,7 +12,10 @@
   "scripts": {
     "start": "electron .",
     "serve": "python -m http.server 8377",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:domain": "tsc -p tsconfig.runtime.json && tsc -p tsconfig.runtime.clock.json && tsc -p tsconfig.runtime.clock-motion.json && tsc -p tsconfig.runtime.clock-view.json && tsc -p tsconfig.runtime.runtime-loop.json && tsc -p tsconfig.runtime.camera-motion.json && tsc -p tsconfig.runtime.time-sync-sampler.json && tsc -p tsconfig.runtime.time-sync-policy.json && tsc -p tsconfig.runtime.audio-schedule.json && tsc -p tsconfig.runtime.audio-coordinator.json && tsc -p tsconfig.runtime.audio-output.json && tsc -p tsconfig.runtime.beats.json && tsc -p tsconfig.runtime.window-bounds.json && tsc -p tsconfig.runtime.window-command.json && tsc -p tsconfig.runtime.window-controller.json && tsc -p tsconfig.runtime.electron-bridge.json && tsc -p tsconfig.runtime.adb-gate.json && tsc -p tsconfig.runtime.adb-schedule.json && tsc -p tsconfig.runtime.adb-device-registry.json && tsc -p tsconfig.runtime.adb-scan-coordinator.json && tsc -p tsconfig.runtime.adb-scan-controller.json && tsc -p tsconfig.runtime.adb-availability-controller.json && tsc -p tsconfig.runtime.adb-lifecycle-controller.json && tsc -p tsconfig.runtime.adb-connection-controller.json && tsc -p tsconfig.runtime.adb-device-view.json && tsc -p tsconfig.runtime.adb-guide-view.json && tsc -p tsconfig.runtime.adb-config-store.json && tsc -p tsconfig.runtime.adb-actions.json && tsc -p tsconfig.runtime.adb-actions-view.json && tsc -p tsconfig.runtime.adb-action-controller.json && tsc -p tsconfig.runtime.adb-screenshot-view.json && tsc -p tsconfig.runtime.adb-screenshot-controller.json && tsc -p tsconfig.runtime.adb-script.json && tsc -p tsconfig.runtime.adb-executor.json && tsc -p tsconfig.runtime.adb-fire-controller.json && tsc -p tsconfig.runtime.preload.json",
+    "test:domain": "npm run build:domain && node tests/countdown-engine.test.cjs && node tests/clock-model.test.cjs && node tests/clock-motion-model.test.cjs && node tests/clock-view.test.cjs && node tests/runtime-loop.test.cjs && node tests/camera-motion-model.test.cjs && node tests/time-sync-sampler.test.cjs && node tests/time-sync-policy.test.cjs && node tests/action-timeline.test.cjs && node tests/adb-emission-gate.test.cjs && node tests/adb-schedule-coordinator.test.cjs && node tests/adb-device-registry.test.cjs && node tests/adb-scan-coordinator.test.cjs && node tests/adb-scan-controller.test.cjs && node tests/adb-availability-controller.test.cjs && node tests/adb-lifecycle-controller.test.cjs && node tests/adb-connection-controller.test.cjs && node tests/adb-device-view.test.cjs && node tests/adb-guide-view.test.cjs && node tests/adb-config-store.test.cjs && node tests/adb-action-catalog.test.cjs && node tests/adb-action-view.test.cjs && node tests/adb-action-controller.test.cjs && node tests/adb-screenshot-picker-view.test.cjs && node tests/adb-screenshot-controller.test.cjs && node tests/adb-script-builder.test.cjs && node tests/adb-fire-controller.test.cjs && node tests/audio-schedule-planner.test.cjs && node tests/audio-schedule-coordinator.test.cjs && node tests/audio-output.test.cjs && node tests/beat-judge.test.cjs && node tests/window-bounds-model.test.cjs && node tests/window-command-model.test.cjs && node tests/window-controller.test.cjs && node tests/electron-bridge.test.cjs && node tests/adb-executor.test.cjs"
   },
   "build": {
     "appId": "com.gardenofkruse.timecore",
@@ -50,6 +53,7 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.9.3"
   }
 }

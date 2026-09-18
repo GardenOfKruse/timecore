@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/clock-view.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/adapters/browser/clock-view.ts"]
+}

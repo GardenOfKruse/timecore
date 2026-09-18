@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-device-registry.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/application/adb/adb-device-registry.ts"]
+}

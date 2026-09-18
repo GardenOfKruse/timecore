@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/action-timeline.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/timeline/action-timeline.ts"]
+}

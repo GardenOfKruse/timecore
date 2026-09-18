@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-device-view.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/adapters/browser/adb-device-view.ts"]
+}

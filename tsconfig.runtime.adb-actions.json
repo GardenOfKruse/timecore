@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-action-catalog.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": [
+    "src/application/adb/adb-action-contract.ts",
+    "src/application/adb/adb-action-catalog.ts"
+  ]
+}

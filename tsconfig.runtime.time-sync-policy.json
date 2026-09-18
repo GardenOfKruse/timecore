@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/time-sync-policy.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/clock/time-sync-policy.ts"]
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-screenshot-picker-view.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": [
+    "src/adapters/browser/adb-screenshot-picker-view.ts"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/window-command-model.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/window/window-command-model.ts"]
+}

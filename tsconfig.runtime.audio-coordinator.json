@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/audio-schedule-coordinator.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/application/audio/audio-schedule-coordinator.ts"]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/clock-motion-model.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/clock/clock-motion-model.ts"]
+}

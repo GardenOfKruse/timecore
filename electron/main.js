@@ -3,6 +3,10 @@ const { app, BrowserWindow, ipcMain, screen, shell, Menu } = require('electron')
 const { spawn } = require('child_process');
 const fs = require('fs');
 const pathM = require('path');
+require('../js/generated/window-bounds-model.js');
+const windowBoundsModel = globalThis.TimeCoreDomain.createWindowBoundsModel();
+require('../js/generated/window-command-model.js');
+const windowCommandModel = globalThis.TimeCoreDomain.createWindowCommandModel();
 
 /* 测试隔离：TC_TMP_PROFILE 指定时使用独立 userData，避免污染真实配置 */
 if (process.env.TC_TMP_PROFILE) app.setPath('userData', process.env.TC_TMP_PROFILE);
@@ -14,17 +18,11 @@ let prevBounds = null;
 /* 窗口尺寸预设与位置记忆：bounds 存 userData/tc-window.json
  * 四形态同一窗口：正常(standard) / 小窗(small) / 仅时间(clock：缩到钟面+只显示时钟) / 全屏(F)
  * mini/compact 为旧版兼容别名 */
-const PRESETS = {
-  standard: [1180, 760],   // 正常
-  small: [480, 320],       // 小窗
-  clock: [280, 96],        // 仅时间
-  compact: [660, 460],     // 旧版兼容
-  mini: [380, 300]         // 旧版兼容
-};
 let clockMode = false;       // 仅时间形态中
 let clockPrev = null;        // 进入仅时间前的 bounds（退出时还原）
 let moveTimer = null;        // 手动拖窗（钟面）：钟面禁用 app-region:drag，移动走增量 setPosition
 let moveStart = null;
+let leftButtonHeld = false;  // 渲染层物理左键状态；与 moveTimer 分离，覆盖失焦/捕获丢失
 
 function beginMove() {
   if (!win) return;
@@ -75,12 +73,7 @@ function saveClockW(w) { try { fs.writeFileSync(clockSizeFile(), JSON.stringify(
 // 钳回显示器工作区：预设/记忆尺寸可能大于当前屏幕（小屏笔记本、换显示器）
 function clampToWork(b) {
   const wa = screen.getDisplayMatching(b).workArea;
-  const w = Math.min(b.width, wa.width - 10), h = Math.min(b.height, wa.height - 10);
-  return {
-    x: Math.max(wa.x, Math.min(b.x, wa.x + wa.width - w)),
-    y: Math.max(wa.y, Math.min(b.y, wa.y + wa.height - h)),
-    width: w, height: h
-  };
+  return windowBoundsModel.clampToWork(b, wa);
 }
 
 function saveBounds() {
@@ -128,7 +121,11 @@ function createWindow() {
 
 /* 窗口命令（IPC 与右键菜单共用） */
 function pushState() {   // 形态/全屏/置顶变化即时推给渲染层（类名秒级翻转，动画不迟到）
-  if (win && !win.isDestroyed()) win.webContents.send('win:state', { clock: clockMode, top: win.isAlwaysOnTop(), fs: fsState });
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('win:state', windowCommandModel.snapshot({
+      clock: clockMode, top: win.isAlwaysOnTop(), fs: fsState
+    }));
+  }
 }
 function toggleTop() {
   if (!win) return;
@@ -167,15 +164,13 @@ function doSize(arg) {
     if (fsState) { fsState = false; win.setFullScreen(false); }
     win.setMinimumSize(120, 60);
     // 缩放记忆：恢复上次的钟面宽度（首次为 280）；宽高比恒定，applyPreset 会钳到工作区
-    const sw = Math.min(1180, Math.max(160, savedClockW() || PRESETS.clock[0]));
-    const ratio = PRESETS.clock[0] / PRESETS.clock[1];
-    applyPreset([sw, Math.round(sw / ratio)]);
+    applyPreset(windowBoundsModel.clockSize(savedClockW()));
     pushState();
     return;
   }
   // 其它预设：若在仅时间形态，先还原形态（clockPrev 为准，避免以钟面尺寸进入常规预设）
   if (clockMode) exitClock();
-  const p = PRESETS[arg && arg.preset];
+  const p = windowBoundsModel.getPreset(arg && arg.preset);
   if (!p) return;
   if (fsState) { fsState = false; win.setFullScreen(false); }
   applyPreset(p);
@@ -183,28 +178,21 @@ function doSize(arg) {
 }
 function applyPreset(p) {
   const cur = win.getBounds();
-  const wa = screen.getDisplayMatching({ x: cur.x, y: cur.y, width: p[0], height: p[1] }).workArea;
-  const w = Math.min(p[0], wa.width - 10), h = Math.min(p[1], wa.height - 10);
-  const x = Math.max(wa.x, Math.min(Math.round(cur.x + cur.width / 2 - w / 2), wa.x + wa.width - w));
-  const y = Math.max(wa.y, Math.min(Math.round(cur.y + cur.height / 2 - h / 2), wa.y + wa.height - h));
-  tweenBounds({ x, y, width: w, height: h });
+  const wa = screen.getDisplayMatching({ x: cur.x, y: cur.y, width: p.width, height: p.height }).workArea;
+  tweenBounds(windowBoundsModel.centerPreset(cur, wa, p));
 }
-function zoomClock(delta) {
-  if (!win || !clockMode || moveTimer) return; // 拖拽期间即使收到误发 wheel 也不得缩放
-  const ratio = PRESETS.clock[0] / PRESETS.clock[1];
-  const minW = 160, maxW = 1180;
+function zoomClock(input) {
+  const isObject = input && typeof input === 'object';
+  const delta = isObject ? Number(input.delta) || 0 : Number(input) || 0;
+  const buttons = isObject ? Number(input.buttons) || 0 : 0;
+  if (!win || !clockMode || moveTimer || leftButtonHeld || (buttons & 1)) return;
   // 连滚基准取逻辑目标（而非动画途中的实际 bounds），尺寸序列与逐次到位完全一致
   const base = (twTimer && twLast) ? twLast : win.getBounds();
-  const nextW = delta < 0 ? base.width * 1.1 : base.width / 1.1;
-  const w = Math.round(Math.max(minW, Math.min(maxW, nextW)));
-  if (w === base.width) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
-  saveClockW(w);   // 缩放记忆：下次进入钟面恢复此宽度
-  const h = Math.round(w / ratio);
   const wa = screen.getDisplayMatching(win.getBounds()).workArea;
-  // 锁定逻辑中心（缩放不移动视觉中心），只有屏幕边缘才做必要钳制。
-  const cx = base.x + base.width / 2, cy = base.y + base.height / 2;
-  const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-  tweenBounds({ x: Math.max(wa.x, Math.min(x, wa.x + wa.width - w)), y: Math.max(wa.y, Math.min(y, wa.y + wa.height - h)), width: w, height: h });
+  const target = windowBoundsModel.zoomClock(base, wa, delta);
+  if (!target) return; // 到达边界后不再重算位置，避免滚轮继续让窗口漂移
+  saveClockW(target.width);   // 缩放记忆：下次进入钟面恢复此宽度
+  tweenBounds(target);
 }
 
 /* 右键菜单：全形态可用（钟面形态的尺寸/退出主入口——拖拽区不向页面投递鼠标事件，页内按钮收不到） */
@@ -227,28 +215,28 @@ function showContextMenu() {
 
 ipcMain.on('win', (ev, cmd, arg) => {
   if (!win) return;
-  switch (cmd) {
-    case 'top': toggleTop(); break;
-    case 'opacity': win.setOpacity(Math.min(1, Math.max(0.3, Number(arg) || 1))); break;
+  const intent = windowCommandModel.route(cmd, arg);
+  if (!intent) return;
+  switch (intent.type) {
+    case 'toggle-top': toggleTop(); break;
+    case 'set-opacity': win.setOpacity(intent.value); break;
     case 'minimize': win.minimize(); break;
-    case 'fullscreen': toggleFs(); break;
-    case 'size': doSize(arg); break;
+    case 'toggle-fullscreen': toggleFs(); break;
+    case 'size': doSize({ preset: intent.preset }); break;
     case 'move-begin': beginMove(); break;
     case 'move-end': endMove(); break;
-    case 'clock-zoom': zoomClock(Number(arg) || 0); break;
-    case 'open': {
-      // 仅允许打开本项目的 GitHub 页面（更新/Releases 跳转）
-      const url = String(arg || '');
-      if (/^https:\/\/github\.com\/GardenOfKruse\/timecore/.test(url)) shell.openExternal(url);
-      break;
-    }
+    case 'set-left-button': leftButtonHeld = intent.held; break;
+    case 'zoom-clock': zoomClock(intent); break;
+    case 'open': shell.openExternal(intent.url); break;
     case 'close': win.close(); break;
   }
 });
 
 ipcMain.handle('win:get', () => ({
-  top: win ? win.isAlwaysOnTop() : false, fs: fsState, ver: app.getVersion(),
-  clock: clockMode
+  ...windowCommandModel.snapshot({
+    top: win ? win.isAlwaysOnTop() : false, fs: fsState, clock: clockMode
+  }),
+  ver: app.getVersion()
 }));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */

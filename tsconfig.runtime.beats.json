@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/beat-judge.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/beats/beat-judge.ts"]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/audio-schedule-planner.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/audio/audio-schedule-planner.ts"]
+}

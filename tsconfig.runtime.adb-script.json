@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/adb-script-builder.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/adb/adb-script-builder.ts"]
+}

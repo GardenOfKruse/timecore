@@ -6,6 +6,7 @@
     'Australia/Sydney', 'Pacific/Auckland'];
 
   const el = {};
+  let windowController = null;
   let toastTimer = 0, vignetteTimer = 0;
 
   function toast(msg, ms) {
@@ -218,35 +219,61 @@
 
     // Electron：窗口控制统一在标题栏（置顶/最小化/全屏/关闭）
     if (window.electronAPI) {
+      windowController = TimeCoreDomain.createWindowController(window.electronAPI);
       document.body.classList.add('electron');
       el.opacityInput.hidden = false;
       const savedOp = Math.min(100, Math.max(30, parseInt(localStorage.getItem('tc.opacity'), 10) || 100));
       el.opacityInput.value = savedOp;
-      if (savedOp < 100) window.electronAPI.send('opacity', savedOp / 100);
+      if (savedOp < 100) windowController.setOpacity(savedOp / 100);
       el.opacityInput.addEventListener('input', () => {
         const v = parseInt(el.opacityInput.value, 10);
-        window.electronAPI.send('opacity', v / 100);
+        windowController.setOpacity(v / 100);
         localStorage.setItem('tc.opacity', String(v));
       });
-      TC.$('tb-min').addEventListener('click', () => window.electronAPI.send('minimize'));
-      TC.$('tb-fs').addEventListener('click', () => window.electronAPI.send('fullscreen'));
+      TC.$('tb-min').addEventListener('click', () => windowController.minimize());
+      TC.$('tb-fs').addEventListener('click', () => windowController.toggleFullscreen());
       TC.$('tb-overlay').addEventListener('click', toggleClockMode);
       // 钟面形态：双击面板任意处退出 + 手动拖窗（无 app-region，真实鼠标事件全可用）+ 首次提示
       const cpanel = document.querySelector('.clock-panel');
-      let dragMoved = false, dragActive = false, dsx = 0, dsy = 0;
+      let dragMoved = false, dragActive = false, leftButtonDown = false, dsx = 0, dsy = 0;
+      let cancelDrag = null;
+      // 左键状态是缩放的硬闸门：失焦/指针捕获丢失时 dragActive 可能先被清掉，
+      // 但物理按键仍未释放。主进程也收一份状态，避免 IPC 到达时只剩“滚轮”信息。
+      const setLeftButton = held => {
+        if (leftButtonDown === held) return;
+        leftButtonDown = held;
+        windowController.setLeftButton(held);
+      };
+      window.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        setLeftButton(true);
+      }, true);
+      window.addEventListener('mouseup', e => {
+        if (e.button !== 0 || e.isTrusted === false) return;
+        setLeftButton(false);
+      }, true);
+      // PointerEvent 是 Electron/Chromium 的另一条真实释放路径；pointercancel 不解锁，
+      // 因为它可能只是失焦/捕获转移，左键物理状态仍未知。不能用 mousemove.buttons=0 推断释放，
+      // 长按失焦时该字段可能先变成 0，正是此前“长按后滚轮放大”的根因。
+      window.addEventListener('pointerup', e => {
+        if (e.button !== 0 || e.isTrusted === false) return;
+        setLeftButton(false);
+      }, true);
       cpanel.addEventListener('mousedown', e => {
         if (e.button !== 0 || !document.body.classList.contains('clockmode')) return;
         if (e.target.closest('button, select, input')) return;   // 控件不触发拖动
         dsx = e.clientX; dsy = e.clientY; dragMoved = false;
         dragActive = true;
-        window.electronAPI.send('move-begin');
+        windowController.beginMove();
         const mv = ev => { if (Math.hypot(ev.clientX - dsx, ev.clientY - dsy) > 4) dragMoved = true; };
         const up = () => {
           dragActive = false;
-          window.electronAPI.send('move-end');
+          windowController.endMove();
           window.removeEventListener('mouseup', up);
           window.removeEventListener('mousemove', mv);
+          if (cancelDrag === up) cancelDrag = null;
         };
+        cancelDrag = up;
         window.addEventListener('mousemove', mv);
         window.addEventListener('mouseup', up);
       });
@@ -254,12 +281,18 @@
         if (document.body.classList.contains('clockmode') && !dragMoved) toggleClockMode();
       });
       cpanel.addEventListener('wheel', e => {
-        if (!document.body.classList.contains('clockmode') || !window.electronAPI) return;
+        if (!document.body.classList.contains('clockmode') || !windowController) return;
         e.preventDefault();
-        if (dragActive) return;
-        window.electronAPI.send('clock-zoom', e.deltaY);
+        const buttons = Number(e.buttons) || 0;
+        // dragActive 是拖窗态，leftButtonDown/buttons 是物理按键态；三者任一成立都不缩放。
+        if (dragActive || leftButtonDown || (buttons & 1)) return;
+        windowController.zoom(e.deltaY, buttons);
       }, { passive: false });
-      window.addEventListener('blur', () => { dragActive = false; });
+      window.addEventListener('blur', () => {
+        // 停止移动定时器，但不要把左键当成已释放；后续 wheel 仍必须被拦截。
+        if (cancelDrag) cancelDrag();
+        else dragActive = false;
+      });
       let hintShown = false;
       const faceHint = document.getElementById('face-hint');
       TC.bus.on('clockmode', on => {
@@ -277,25 +310,19 @@
         if (was !== isClock) TC.bus.emit('clockmode', isClock);   // 进入/退出都通知钟面动效收尾
         syncFullscreenBtn(st.fs);
         TC.$('tb-top').classList.toggle('active', !!st.top);
+        if (st.ver !== null) {
+          const v = st.ver ? 'v' + st.ver : '';
+          el.tbVer.textContent = v;
+          el.aboutVer.textContent = v;
+          el.drawerVer.textContent = v;
+        }
       };
-      if (window.electronAPI.onState) window.electronAPI.onState(applyWinState);
-      const syncClockMode = () => window.electronAPI.get().then(applyWinState).catch(() => {});
-      syncClockMode();
-      setInterval(syncClockMode, 800);
-      window.electronAPI.get().then(st => {
-        syncFullscreenBtn(st.fs);
-        TC.$('tb-top').classList.toggle('active', st.top);
-        // 版本号：标题栏角标 + 关于浮层 + 设置抽屉同一来源（app.getVersion）
-        const v = st.ver ? 'v' + st.ver : '';
-        el.tbVer.textContent = v;
-        el.aboutVer.textContent = v;
-        el.drawerVer.textContent = v;
-      }).catch(() => {});
-      TC.$('tb-close').addEventListener('click', () => window.electronAPI.send('close'));
-      TC.$('tb-top').addEventListener('click', async function () {
-        window.electronAPI.send('top');
-        const st = await window.electronAPI.get();
-        this.classList.toggle('active', st.top);
+      windowController.subscribe(applyWinState);
+      windowController.connect(800);
+      TC.$('tb-close').addEventListener('click', () => windowController.close());
+      TC.$('tb-top').addEventListener('click', () => {
+        windowController.toggleTop();
+        void windowController.refresh();
       });
 
       // 关于浮层：点标题栏 TIMECORE 展开；点击外部 / Esc 收起
@@ -303,7 +330,7 @@
       document.addEventListener('pointerdown', e => {
         if (!el.aboutPop.hidden && !el.aboutPop.contains(e.target) && !TC.$('tb-title').contains(e.target)) el.aboutPop.hidden = true;
       });
-      el.aboutGh.addEventListener('click', () => window.electronAPI.send('open', 'https://github.com/GardenOfKruse/timecore/releases'));
+      el.aboutGh.addEventListener('click', () => windowController.open('https://github.com/GardenOfKruse/timecore/releases'));
       el.aboutCheck.addEventListener('click', async function () {
         this.disabled = true;
         const old = this.textContent;
@@ -315,7 +342,7 @@
           const cur = String(el.aboutVer.textContent || '').replace(/^v/, '');
           if (latest && cmpVer(latest, cur) > 0) {
             toast('⬆ 发现新版本 v' + latest + ' —— 正在打开 Releases 页面');
-            window.electronAPI.send('open', j.html_url);
+            windowController.open(j.html_url);
           } else if (latest) {
             toast('✓ 已是最新版本 v' + cur);
           } else {
@@ -343,12 +370,12 @@
       } else if (e.code === 'KeyF' && !e.repeat && !isTyping(e.target)) toggleFullscreen();
       else if (e.code === 'KeyC' && !e.repeat && !isTyping(e.target)) toggleCompact();
       else if (e.code === 'KeyM' && !e.repeat && !isTyping(e.target)) { TC.Audio.setMute(!TC.Audio.muted); el.mute.classList.toggle('active', TC.Audio.muted); }
-      else if (e.ctrlKey && !e.repeat && /^Digit[1-3]$/.test(e.code) && window.electronAPI) {
+      else if (e.ctrlKey && !e.repeat && /^Digit[1-3]$/.test(e.code) && windowController) {
         e.preventDefault();
         if (e.code === 'Digit1') { toggleClockMode(); return; }
-        window.electronAPI.send('size', { preset: e.code === 'Digit2' ? 'small' : 'standard' });
+        windowController.setSize(e.code === 'Digit2' ? 'small' : 'standard');
       } else if (e.code === 'Escape') {
-        if (fsNow && window.electronAPI) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
+        if (fsNow && windowController) { toggleFullscreen(); return; }   // 全屏时 Esc 先退全屏
         if (document.body.classList.contains('clockmode')) { toggleClockMode(); return; }   // 仅时间形态时 Esc 退出
         el.drawer.classList.remove('open');
         if (el.aboutPop) el.aboutPop.hidden = true;
@@ -397,8 +424,8 @@
     return innerWidth < 640 ? 'small' : 'standard';
   }
   function toggleCompact() {
-    if (window.electronAPI) {
-      window.electronAPI.send('size', { preset: SIZE_ORDER[(SIZE_ORDER.indexOf(currentSize()) + 1) % SIZE_ORDER.length] });
+    if (windowController) {
+      windowController.setSize(SIZE_ORDER[(SIZE_ORDER.indexOf(currentSize()) + 1) % SIZE_ORDER.length]);
       return;
     }
     const on = !document.body.classList.contains('compact');
@@ -421,7 +448,7 @@
   function toggleClockMode() {
     const on = !document.body.classList.contains('clockmode');
     document.body.classList.toggle('clockmode', on);
-    if (window.electronAPI) window.electronAPI.send('size', { preset: 'clock' });
+    if (windowController) windowController.setSize('clock');
     TC.bus.emit('clockmode', on);
     toast(on ? '仅时间形态：双击退出 · 右键菜单 · 滚轮缩放' : '已退出仅时间形态');
   }
@@ -459,10 +486,10 @@
   let fsNow = false;   // 显式同步的全屏状态（Electron 下由主进程回传）
 
   function toggleFullscreen() {
-    if (window.electronAPI) {
+    if (windowController) {
       // 桌面端走原生 setFullScreen（HTML5 Fullscreen 在无边框透明窗口上进出不可靠）
-      window.electronAPI.send('fullscreen');
-      window.electronAPI.get().then(st => syncFullscreenBtn(st.fs)).catch(() => {});
+      windowController.toggleFullscreen();
+      void windowController.refresh();
     } else if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     } else {

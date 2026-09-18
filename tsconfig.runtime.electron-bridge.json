@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/electron-bridge.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/adapters/electron/electron-bridge.ts"]
+}
