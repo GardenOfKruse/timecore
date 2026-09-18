@@ -79,7 +79,7 @@ await sleep(2400);
 try { await js(`document.getElementById('wl-skip').click()`); } catch (_) {}
 await sleep(1200);
 const midnight = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
-check('午夜：太阳背面 + 月光补光', midnight.override === 0 && midnight.pos[2] < -5 && midnight.moon > 0.4, midnight);
+check('午夜：太阳背面 + 月相调制夜光（新月 0.17 ~ 满月 0.50 物理区间）', midnight.override === 0 && midnight.pos[2] < -5 && midnight.moon > 0.15 && midnight.moon < 0.51, midnight);
 await js(`location.href = location.pathname`);
 await sleep(2400);
 try { await js(`document.getElementById('wl-skip').click()`); } catch (_) {}

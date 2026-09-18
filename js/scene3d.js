@@ -56,7 +56,9 @@
     scene.userData.keyLight.color.setRGB(1, 0.8 + 0.2 * (1 - warm), 0.62 + 0.38 * (1 - warm));
     scene.userData.keyLight.intensity = day * (0.55 + cur.intensity * 0.25);
     if (moonLight) {
-      moonLight.intensity = (1 - day) * 0.55;
+      // 夜光随真实月相调制（v1.11.0）：满月夜明亮、新月夜沉暗；floor 保底不让夜面全黑
+      const illum = TimeCoreDomain.moonPhase(moonEpoch(e)).illum;
+      moonLight.intensity = (1 - day) * 0.55 * (0.35 + 0.65 * illum);
       moonLight.color.setHex(0x8fb4ff);
     }
   }
@@ -846,7 +848,8 @@
         lastFrame: lastFrameInfo,
         trails: sats.filter(s => s.trail && s.trail.visible).length,
         dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null,
-        hourPulses: hourPulseCount
+        hourPulses: hourPulseCount,
+        keyColor: k.color.getHexString()
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },
@@ -875,7 +878,12 @@
         angleDeg: Math.round(st.angleRad * 180 / Math.PI * 10) / 10,
         azimuthDot: Math.round(azimuthDot * 1000) / 1000,
         litDot: Math.round(dot * 1000) / 1000,
-        visible: moon.visible
+        visible: moon.visible,
+        // 屏幕投影（构图/测试用）：月亮中心在视口内的像素坐标
+        screen: (() => {
+          const v = moon.position.clone().project(camera);
+          return { x: Math.round((v.x + 1) / 2 * window.innerWidth), y: Math.round((1 - (v.y + 1) / 2) * window.innerHeight) };
+        })()
       };
     },
     debugView() { return { ...cameraMotion.state(), dragging: scenePointer.active && scenePointer.moved, canvas: !!sceneCanvas }; }

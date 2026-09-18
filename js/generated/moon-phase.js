@@ -11,7 +11,8 @@ var TimeCoreDomain;
             ageDays: phase * TimeCoreDomain.MOON_SYNODIC_DAYS,
             phase,
             angleRad: phase * Math.PI * 2,
-            waxing: phase < 0.5
+            waxing: phase < 0.5,
+            illum: (1 - Math.cos(phase * Math.PI * 2)) / 2
         };
     }
     TimeCoreDomain.moonPhase = moonPhase;

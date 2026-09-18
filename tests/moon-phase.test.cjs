@@ -44,9 +44,14 @@ const { moonPhase, MOON_SYNODIC_DAYS, MOON_REFERENCE_NEW_MOON_MS } = globalThis.
   const c = moonPhase(MOON_REFERENCE_NEW_MOON_MS + 1000);
   ok(close(c.angleRad, c.phase * Math.PI * 2));
 
+  // 照亮比例：新月 0 / 上弦 0.5 / 满月 1
+  ok(ref.illum === 0);
+  ok(Math.abs(q1.illum - 0.5) < 1e-9);
+  ok(Math.abs(full.illum - 1) < 1e-9);
+
   // 输出为副本且字段完整
   const keys = Object.keys(ref).sort().join(',');
-  ok(keys === 'ageDays,angleRad,phase,waxing');
+  ok(keys === 'ageDays,angleRad,illum,phase,waxing');
 
   // 确定性
   ok(close(moonPhase(1234567890123).phase, moonPhase(1234567890123).phase));

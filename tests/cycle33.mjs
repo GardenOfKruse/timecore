@@ -143,6 +143,13 @@ const hpBlocked = await js(`(async () => {
 })()`);
 check('整点深呼吸：布防期间让位、停止后恢复', hpBlocked.denied === false && hpBlocked.allowedAfter === true, hpBlocked);
 
+// K: 月相调制夜光——满月夜的月光补光强于新月夜（debugSun.moon 为 moonLight 强度）
+await reloadWith('sunhour=0&moonage=14.77');
+const nightFull = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+await reloadWith('sunhour=0&moonage=0.5');
+const nightNew = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+check('月相调制夜光：满月夜 > 新月夜（0.5 倍以上差距）', nightFull.moon > nightNew.moon * 2, { full: nightFull.moon, new: nightNew.moon });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

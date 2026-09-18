@@ -4,6 +4,7 @@ namespace TimeCoreDomain {
     phase: number;        // 0 新月 → 0.5 满月 → 1 下一个新月
     angleRad: number;     // 轨道角：新月 0（位于太阳与星球连线之间），满月 π（背向太阳）
     waxing: boolean;      // 盈月（新月→满月）为 true
+    illum: number;        // 被照亮比例：0 新月 → 1 满月（(1−cos 2π·phase)/2）
   }
 
   export const MOON_SYNODIC_DAYS = 29.530588853;
@@ -17,7 +18,8 @@ namespace TimeCoreDomain {
       ageDays: phase * MOON_SYNODIC_DAYS,
       phase,
       angleRad: phase * Math.PI * 2,
-      waxing: phase < 0.5
+      waxing: phase < 0.5,
+      illum: (1 - Math.cos(phase * Math.PI * 2)) / 2
     };
   }
 }
