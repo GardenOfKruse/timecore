@@ -67,10 +67,11 @@
   1. **数字 tick**：时/分/秒拆独立 span（.d-pair，textContent 仍为 HH:MM:SS），变化的对做 240ms 上浮淡入（digitTick），冒号降为 .62 透明度衬托主体；
   2. **形态 morph**：主进程 tweenBounds 窗口缓动（easeOutCubic 170ms/16ms 步进，结尾一步落精确目标供 E2E 断言；拖动/全屏/关闭取消；滚轮连滚在逻辑目标上累乘重定向，尺寸序列与逐次到位一致）+ 钟面 clockIn 淡入放大 200ms + 退出时主面板 panelIn 淡入 180ms（display 翻转自动重放）；
   3. **滚轮丝滑缩放**：zoomClock 走同一 tween；
-  4. **呼吸边**：::before 覆层调制边框亮度（5.6s 正弦，无 box-shadow、无彩色）——见辉光配额例外。
+  4. **布防心动**：仅钟面形态由 `js/clock.js` 的单一 ClockMotion 控制器驱动真实 `.clock-breath` 与 `#clock-hms`；NORMAL 2.6s、WARMUP 1.8s、SURGE 1.1s、PULSE 0.62s，一轻一重后留白。边框透明度是主拍，数字只做 ≤0.7% 微缩放；阶段只换色/节奏，秒环保持稳定，不再叠加闪烁轨道。
 - 毫秒显示不动画（60fps 直接刷文本，动画会糊）；隐藏页回落 66ms 定时器照常刷新。
 - **秒环（v1.3.1）**：钟面边框即秒针——SVG rect pathLength=1000，彗尾 dasharray 60/940，每帧写 dashoffset，1.6px accent 色绕边框一周/秒；cd:zero 时钟面 zero-pulse 整窗呼吸 550ms。
 - **缩放记忆（v1.3.2）**：滚轮缩放即时写 userData/tc-clock.json，再次进入钟面恢复上次宽度（首用 280，ratio 恒定，applyPreset 钳工作区）。
+- **布防心动约束（v1.5.3）**：ZERO 只做一次 560ms 白色释放，不循环；停止、完成、退出钟面立即取消 WAAPI。`prefers-reduced-motion` 下取消循环位移，保留静态低幅度状态反馈；若浏览器不支持 WAAPI，退化为静态状态色，不影响倒计时逻辑。
 
 ### 2.7 首次启动体验
 - **全新 profile 判定**：tc.welcomed 不存在且所有偏好键为空（判实际状态，非版本号）→ 显示欢迎卡：开启节拍器（顺带解锁 AudioContext）/ 配置 ADB / 直接进入；老用户升级不弹。
@@ -94,7 +95,8 @@
 ## 3. 视觉系统
 
 - **辉光配额**（v1.1.0 定稿）：常驻辉光唯一归属 = 倒计时数字（随阶段 青→琥珀→橙→红→释放白 变色，与 3D 能量环同体系）；瞬时辉光仅 judge 弹出与到点白闪；其余一律扁平。禁止新增装饰性彩色辉光。
-  - **钟面唯一例外（v1.2.5）**：仅时间形态允许一处「呼吸边」——::before 覆层只调制边框亮度（中性色、无 box-shadow 辉光、无彩色），让悬浮钟面有生命感而不破配额。
+  - **钟面唯一例外（v1.5.3）**：仅时间形态允许一处「布防心动」——`.clock-breath` 只调制 1px 边框透明度，布防时才按阶段着色；无 box-shadow、无粒子、无额外装饰性辉光。
+- **钟面布防动效例外（v1.5.3）**：只在用户已布防时允许阶段色边框和低幅度心动透明度变化；不新增 box-shadow、粒子或 3D 渲染，不影响正常窗口。
 - 阶段色：WARMUP #ffb347 / SURGE #ff8c3b / PULSE #ff4d5e / ZERO #fff；accent #39d7ff；面板 rgba(9,15,27,.46) 玻璃 + backdrop blur。
 - 3D 中心：程序化星球（值噪声大陆+云层+大气 BackSide shader），节拍弹跳，粒子 30fps 限频（dt 累积器），震屏为 camera 位移。
 - **真实太阳（v1.3.1）**：key 光方位角按显示时区的真实时刻绕星球转（12:00 正面 / 00:00 背面），高度角艺术定值 2.6；强度 = 昼夜因子 day × 阶段因子；晨昏带色温偏暖；夜半球由反向冷色月光补光。?sunhour=N 固定时刻（测试/截图），TC.Scene.debugSun() 探针。

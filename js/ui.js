@@ -233,14 +233,16 @@
       TC.$('tb-overlay').addEventListener('click', toggleClockMode);
       // 钟面形态：双击面板任意处退出 + 手动拖窗（无 app-region，真实鼠标事件全可用）+ 首次提示
       const cpanel = document.querySelector('.clock-panel');
-      let dragMoved = false, dsx = 0, dsy = 0;
+      let dragMoved = false, dragActive = false, dsx = 0, dsy = 0;
       cpanel.addEventListener('mousedown', e => {
         if (e.button !== 0 || !document.body.classList.contains('clockmode')) return;
         if (e.target.closest('button, select, input')) return;   // 控件不触发拖动
         dsx = e.clientX; dsy = e.clientY; dragMoved = false;
+        dragActive = true;
         window.electronAPI.send('move-begin');
         const mv = ev => { if (Math.hypot(ev.clientX - dsx, ev.clientY - dsy) > 4) dragMoved = true; };
         const up = () => {
+          dragActive = false;
           window.electronAPI.send('move-end');
           window.removeEventListener('mouseup', up);
           window.removeEventListener('mousemove', mv);
@@ -254,8 +256,10 @@
       cpanel.addEventListener('wheel', e => {
         if (!document.body.classList.contains('clockmode') || !window.electronAPI) return;
         e.preventDefault();
+        if (dragActive) return;
         window.electronAPI.send('clock-zoom', e.deltaY);
       }, { passive: false });
+      window.addEventListener('blur', () => { dragActive = false; });
       let hintShown = false;
       const faceHint = document.getElementById('face-hint');
       TC.bus.on('clockmode', on => {
@@ -268,8 +272,9 @@
       // 形态状态同步：主进程推送即时翻转（右键菜单进/出不迟到）+ 800ms 轮询兜底
       const applyWinState = st => {
         const was = document.body.classList.contains('clockmode');
-        document.body.classList.toggle('clockmode', !!st.clock);
-        if (!was && st.clock) TC.bus.emit('clockmode', true);   // 任意入口进入钟面都触发首次提示
+        const isClock = !!st.clock;
+        document.body.classList.toggle('clockmode', isClock);
+        if (was !== isClock) TC.bus.emit('clockmode', isClock);   // 进入/退出都通知钟面动效收尾
         syncFullscreenBtn(st.fs);
         TC.$('tb-top').classList.toggle('active', !!st.top);
       };

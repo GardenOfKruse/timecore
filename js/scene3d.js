@@ -11,7 +11,7 @@
   let quality = 2;                      // 2 高 / 1 中 / 0 低
   let fpsAcc = 0, fpsN = 0, fpsTimer = 0;
   const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
-  let viewYaw = 0, viewYawTarget = 0;
+  let viewYaw = 0, viewYawTarget = 0, viewPitch = 0, viewPitchTarget = 0;
   const scenePointer = { active: false, moved: false, x: 0, y: 0, id: null };
 
   /* 真实太阳：key 光绕星球按当地（或当前显示）时区的时刻旋转
@@ -592,6 +592,7 @@
       scenePointer.x = e.clientX;
       scenePointer.y = e.clientY;
       viewYawTarget -= dx * 0.009;
+      viewPitchTarget = Math.max(-1.15, Math.min(1.15, viewPitchTarget - dy * 0.007));
       e.preventDefault();
     });
     const endScenePointer = e => {
@@ -760,9 +761,11 @@
     shake *= Math.exp(-dt * 3.2);
     const sx = (Math.random() - 0.5) * shake * 0.09, sy = (Math.random() - 0.5) * shake * 0.09;
     viewYaw += (viewYawTarget - viewYaw) * (1 - Math.exp(-dt * 8));
-    camera.position.x = Math.sin(viewYaw) * 7.4 + mouse.sx * 0.45 + sx;
-    camera.position.y = 0.35 - mouse.sy * 0.3 + sy;
-    camera.position.z = Math.cos(viewYaw) * 7.4;
+    viewPitch += (viewPitchTarget - viewPitch) * (1 - Math.exp(-dt * 8));
+    const orbitR = 7.4, orbitFlat = Math.cos(viewPitch) * orbitR;
+    camera.position.x = Math.sin(viewYaw) * orbitFlat + mouse.sx * 0.45 + sx;
+    camera.position.y = 0.35 + Math.sin(viewPitch) * orbitR - mouse.sy * 0.3 + sy;
+    camera.position.z = Math.cos(viewYaw) * orbitFlat;
     camera.lookAt(0, 0, 0);
 
     renderer.render(scene, camera);
@@ -786,6 +789,6 @@
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },
-    debugView() { return { yaw: viewYaw, targetYaw: viewYawTarget, dragging: scenePointer.active && scenePointer.moved, canvas: !!sceneCanvas }; }
+    debugView() { return { yaw: viewYaw, targetYaw: viewYawTarget, pitch: viewPitch, targetPitch: viewPitchTarget, dragging: scenePointer.active && scenePointer.moved, canvas: !!sceneCanvas }; }
   };
 })();

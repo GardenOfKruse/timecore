@@ -482,14 +482,14 @@ body.clockmode .clock-panel {
 body.clockmode .clock-panel:hover {
   border-color: rgba(190, 225, 255, 0.4); background: rgba(13, 20, 35, 0.56);
 }
-/* 呼吸边：钟面唯一的“活”的光——只调制边框亮度（::before 覆层），
- * 无 box-shadow 辉光、无彩色，不违反辉光配额 */
-body.clockmode .clock-panel::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit;
-  border: 1px solid rgba(190, 225, 255, 0.6); opacity: 0; pointer-events: none;
-  animation: faceBreath 5.6s ease-in-out infinite;
+/* 动效边：用真实 DOM 层承接 WAAPI，避免伪元素动画在 Electron 中不可观测/不稳定。
+ * 只调制 1px 边框透明度，不增加 box-shadow 或装饰性辉光。 */
+body.clockmode .clock-panel::before { display: none; }
+body.clockmode .clock-breath {
+  position: absolute; inset: 0; z-index: 0; display: block;
+  border: 1px solid currentColor; border-radius: inherit;
+  color: var(--accent); opacity: 0; pointer-events: none;
 }
-@keyframes faceBreath { 0%, 100% { opacity: 0; } 50% { opacity: 0.4; } }
 @keyframes clockIn { from { opacity: 0; transform: scale(0.96); } }
 /* 退出钟面：主面板/标题栏淡入回归（display 翻转自动重放），与窗口缓动同节奏 */
 .cd-panel, .ctrl-panel, #titlebar { animation: panelIn 0.18s ease-out; }
@@ -497,6 +497,7 @@ body.clockmode .clock-panel::before {
 /* 注意：钟面禁用一切 -webkit-app-region:drag——它会按几何矩形截留整窗鼠标事件
  * （双击/右键全部失效，右键还会弹系统菜单）。移动窗口走手动拖窗（move-begin/move-end IPC）。 */
 body.clockmode .row-main { position: relative; flex-wrap: nowrap; gap: 1px; line-height: 1; }
+body.clockmode .row-main { z-index: 1; }
 body.clockmode #clock-hms { font-size: 12.6vw; font-weight: 600; }   /* vw：文字随窗口等比缩放（用户可拉伸钟面） */
 body.clockmode #clock-ms { font-size: 6.3vw; }
 body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一律不显示 */
@@ -511,7 +512,7 @@ body.clockmode .row-sub { display: none !important; }   /* 纯钟面：其余一
  * SVG rect pathLength=1000，dasharray 头 60 尾 940，JS 每帧写 dashoffset */
 .sec-ring { display: none; }
 body.clockmode .sec-ring {
-  display: block; position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%;
   fill: none; stroke: var(--accent); stroke-opacity: 0.7; stroke-width: 1.6;
   stroke-linecap: round; pointer-events: none; transition: stroke-opacity 0.2s ease;
 }
@@ -522,21 +523,27 @@ body.clockmode .sec-ring rect {
 }
 /* 零点脉动：倒计时归零瞬间钟面整体一次呼吸（到点白闪同属瞬时配额） */
 body.clockmode .clock-panel.zero-pulse { animation: clockPulse 0.55s cubic-bezier(0.3, 0.7, 0.3, 1); }
-body.clockmode .clock-panel.zero-pulse::before { animation: none; opacity: 0.55; border-color: rgba(255, 255, 255, 0.6); }
 @keyframes clockPulse { 0% { transform: scale(1); } 35% { transform: scale(1.025); } 100% { transform: scale(1); } }
 
-/* 布防态：边框作为状态轨道，只改变边框色/透明度和节奏，不新增装饰性辉光 */
+/* 布防态：边框作为状态轨道，只改变颜色，不另起一套动画时间线。 */
 body.clockmode .clock-panel.clock-armed { border-color: rgba(57, 215, 255, 0.42); }
 body.clockmode .clock-panel.clock-phase-warmup { border-color: rgba(255, 179, 71, 0.62); }
 body.clockmode .clock-panel.clock-phase-surge { border-color: rgba(255, 140, 59, 0.72); }
 body.clockmode .clock-panel.clock-phase-pulse { border-color: rgba(255, 77, 94, 0.82); }
 body.clockmode .clock-panel.clock-phase-zero { border-color: rgba(255, 255, 255, 0.9); }
-body.clockmode .clock-phase-warmup .sec-ring { stroke: var(--warm); animation: clockTrackBreath 1.8s ease-in-out infinite; }
-body.clockmode .clock-phase-surge .sec-ring { stroke: var(--hot); animation: clockTrackBreath 0.9s ease-in-out infinite; }
-body.clockmode .clock-phase-pulse .sec-ring { stroke: var(--pulse); animation: clockTrackPulse 0.42s ease-in-out infinite; }
-body.clockmode .clock-phase-zero .sec-ring { stroke: #fff; stroke-opacity: 1; animation: none; }
-@keyframes clockTrackBreath { 0%, 100% { stroke-opacity: 0.62; } 50% { stroke-opacity: 0.96; } }
-@keyframes clockTrackPulse { 0%, 100% { stroke-opacity: 0.62; } 50% { stroke-opacity: 1; } }
+body.clockmode .clock-panel.clock-phase-warmup .clock-breath { color: var(--warm); }
+body.clockmode .clock-panel.clock-phase-surge .clock-breath { color: var(--hot); }
+body.clockmode .clock-panel.clock-phase-pulse .clock-breath { color: var(--pulse); }
+body.clockmode .clock-panel.clock-phase-zero .clock-breath { color: #fff; }
+body.clockmode .clock-phase-warmup .sec-ring { stroke: var(--warm); }
+body.clockmode .clock-phase-surge .sec-ring { stroke: var(--hot); }
+body.clockmode .clock-phase-pulse .sec-ring { stroke: var(--pulse); }
+body.clockmode .clock-phase-zero .sec-ring { stroke: #fff; stroke-opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.clockmode .clock-panel,
+  body.clockmode .d-pair.tick { animation: none; }
+}
 
 /* 开场仪式：内容整体淡入（配合主进程 ready-to-show 再显示，通电感） */
 body { animation: bootIn 0.32s ease-out; }

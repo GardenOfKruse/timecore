@@ -96,12 +96,12 @@ const viewDrag = JSON.parse(await js(`(() => {
   const c = document.getElementById('scene');
   const before = TC.Scene.debugView();
   c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 31, button: 0, clientX: 400, clientY: 300 }));
-  c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 31, buttons: 1, clientX: 520, clientY: 300 }));
-  c.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, button: 0, clientX: 520, clientY: 300 }));
+  c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 31, buttons: 1, clientX: 520, clientY: 180 }));
+  c.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 31, button: 0, clientX: 520, clientY: 180 }));
   const after = TC.Scene.debugView();
-  return JSON.stringify({ before, after, changed: Math.abs(after.targetYaw - before.targetYaw) > 0.5 });
+  return JSON.stringify({ before, after, yawChanged: Math.abs(after.targetYaw - before.targetYaw) > 0.5, pitchChanged: Math.abs(after.targetPitch - before.targetPitch) > 0.5 });
 })()`));
-check('星球横向拖拽：相机方位可环绕 360°', viewDrag.changed && viewDrag.after.canvas === true && viewDrag.after.dragging === false, viewDrag);
+check('星球球面拖拽：上下左右均可转动镜头', viewDrag.yawChanged && viewDrag.pitchChanged && viewDrag.after.canvas === true && viewDrag.after.dragging === false, viewDrag);
 
 // D: 钟面秒环——存在、随毫秒推进
 await js(`electronAPI.send('size', { preset: 'clock' })`);
@@ -118,18 +118,26 @@ check('秒环：存在且随毫秒推进', ring.exists && ring.moved, ring);
 
 // E: 零点脉动——钟面形态下归零触发 zero-pulse（bus 收据 + 面板类双重取证）
 const zp = await js(`(async () => {
-  window.__z31 = { bus: false, cls: false, armedStyle: false };
+window.__z31 = { bus: false, cls: false, armedStyle: false };
   TC.bus.on('cd:zero', () => { window.__z31.bus = true; if (document.body.classList.contains('clockmode')) {
     const p2 = document.querySelector('.clock-panel');
     if (p2) window.__z31.cls = true;
   } });
-  electronAPI.send('size', { preset: 'clock' });
+  // 先在正常窗口布防，再进入钟面，验证 clockmode 入口会重新接管当前阶段的动效。
+  if (document.body.classList.contains('clockmode')) electronAPI.send('size', { preset: 'clock' });
+  while (document.body.classList.contains('clockmode')) await new Promise(r2 => setTimeout(r2, 40));
   await new Promise(r2 => setTimeout(r2, 800));
   TC.Countdown.startSingle(TC.time.epoch() + 4000);   // 绝对目标 4s 后：确保归零发生在重进钟面之后
   await new Promise(r2 => setTimeout(r2, 700));
-  window.__z31.armedStyle = document.querySelector('.clock-panel').classList.contains('clock-armed');
   electronAPI.send('size', { preset: 'clock' });
+  while (!document.body.classList.contains('clockmode')) await new Promise(r2 => setTimeout(r2, 40));
   await new Promise(r2 => setTimeout(r2, 600));
+  const cp = document.querySelector('.clock-panel');
+  window.__z31.armedStyle = {
+    clock: document.body.classList.contains('clockmode'),
+    class: cp.classList.contains('clock-armed'),
+    motion: TC.Clock.debugMotion()
+  };
   const deadline = Date.now() + 7000;
   while (Date.now() < deadline) {
     if (document.querySelector('.clock-panel').classList.contains('zero-pulse')) window.__z31.cls = true;
@@ -138,7 +146,11 @@ const zp = await js(`(async () => {
   }
   return JSON.stringify(window.__z31);
 })()`);
-check('零点脉动：cd:zero 触发且钟面布防态生效', JSON.parse(zp).bus === true && JSON.parse(zp).cls === true && JSON.parse(zp).armedStyle === true, zp);
+const zpj = JSON.parse(zp);
+const mm = zpj.armedStyle.motion;
+const motionPhases = new Set(['NORMAL', 'WARMUP', 'SURGE', 'PULSE']);
+const motionOk = mm && motionPhases.has(mm.phase) && (mm.reduced ? mm.animations === 0 : mm.supported && mm.animations >= 2);
+check('零点脉动：cd:zero 触发且钟面布防态生效', zpj.bus === true && zpj.cls === true && zpj.armedStyle.clock === true && zpj.armedStyle.class === true && motionOk, zp);
 
 // F: 钟面缩放记忆——放大后退出再进入保持宽度（先确保从主窗口开始）
 if (await js(`document.body.classList.contains('clockmode')`)) {
@@ -150,6 +162,17 @@ await js(`electronAPI.send('size', { preset: 'clock' })`);
 await waitJs(`document.body.classList.contains('clockmode')`);
 await sleep(600);
 const dragBaseW = await js(`innerWidth`);
+const dragWheelGuard = await js(`(() => {
+  const p = document.querySelector('.clock-panel');
+  p.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: 100, clientY: 40 }));
+  const ev = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -100 });
+  p.dispatchEvent(ev);
+  return { prevented: ev.defaultPrevented };
+})()`);
+await sleep(220);
+const dragDomW = await js(`innerWidth`);
+await js(`window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))`);
+check('真实钟面拖拽期间 wheel 被拦截且不缩放', dragWheelGuard.prevented && dragDomW === dragBaseW, { dragBaseW, dragDomW, dragWheelGuard });
 await js(`electronAPI.send('move-begin'); electronAPI.send('clock-zoom', -1)`);
 await sleep(220);
 const dragGuardW = await js(`innerWidth`);

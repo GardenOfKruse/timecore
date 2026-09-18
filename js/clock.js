@@ -19,6 +19,10 @@
     return p;
   }
 
+  const motion = {
+    phase: 'IDLE', reduced: false, supported: false, media: null, animations: []
+  };
+
   TC.Clock = {
     get tz() { return tzKey; },
 
@@ -59,19 +63,107 @@
         last.day = dayKey;
         el.date.textContent = p.year + '-' + p.month + '-' + p.day + ' ' + (WD[p.weekday] || p.weekday);
       }
+    },
+
+    // cycle31/诊断用：确认钟面动效确实由 WAAPI 驱动，而不是只存在 CSS 文本。
+    debugMotion() {
+      const active = motion.animations.filter(a => {
+        try { return a && a.playState !== 'idle'; } catch (_) { return !!a; }
+      }).length;
+      return {
+        phase: motion.phase,
+        reduced: motion.reduced,
+        supported: motion.supported,
+        animations: active,
+        breathOpacity: el.breath ? getComputedStyle(el.breath).opacity : null,
+        hmsTransform: el.hms ? getComputedStyle(el.hms).transform : null
+      };
     }
   };
 
   const el = { pairs: {} };
   const last = { h: '', m: '', s: '', day: '' };
 
+  const MOTION_PROFILE = {
+    // 一轻一重，中间留白；阶段只改变节奏和幅度，不叠加新的视觉对象。
+    NORMAL: { duration: 2600, peak: 0.42, second: 0.25, scale: 1.004, dip: 0.988 },
+    WARMUP: { duration: 1800, peak: 0.52, second: 0.31, scale: 1.005, dip: 0.984 },
+    SURGE:  { duration: 1100, peak: 0.64, second: 0.39, scale: 1.006, dip: 0.980 },
+    PULSE:  { duration:  620, peak: 0.76, second: 0.48, scale: 1.007, dip: 0.974 }
+  };
+
+  function cancelMotion() {
+    for (const a of motion.animations) {
+      try { a.cancel(); } catch (_) { /* 动效已被浏览器回收 */ }
+    }
+    motion.animations = [];
+    if (el.breath) el.breath.style.opacity = '0';
+    if (el.hms) {
+      el.hms.style.transform = '';
+      el.hms.style.opacity = '';
+    }
+  }
+
+  function applyMotionPhase(phase) {
+    const ph = phase || 'IDLE';
+    motion.phase = ph;
+    motion.reduced = !!(motion.media && motion.media.matches);
+    cancelMotion();
+    // 动效严格限定在小时间窗口；正常窗口只保留阶段类供其他 UI 使用。
+    if (!document.body.classList.contains('clockmode') || !el.breath || !el.hms || ph === 'IDLE') return;
+
+    const canAnimate = typeof el.breath.animate === 'function' && typeof el.hms.animate === 'function';
+    motion.supported = canAnimate;
+    if (motion.reduced || !canAnimate) {
+      el.breath.style.opacity = ph === 'ZERO' ? '0.58' : '0.24';
+      return;
+    }
+
+    el.hms.style.transformOrigin = '50% 50%';
+    if (ph === 'ZERO') {
+      const easing = 'cubic-bezier(0.16, 1, 0.3, 1)';
+      motion.animations = [
+        el.breath.animate([
+          { opacity: 0.08 }, { opacity: 0.88, offset: 0.28 }, { opacity: 0.24 }
+        ], { duration: 560, easing, fill: 'both' }),
+        el.hms.animate([
+          { transform: 'scale(1)', opacity: 1 },
+          { transform: 'scale(1.012)', opacity: 1, offset: 0.34 },
+          { transform: 'scale(1)', opacity: 1 }
+        ], { duration: 560, easing, fill: 'both' })
+      ];
+      return;
+    }
+
+    const p = MOTION_PROFILE[ph] || MOTION_PROFILE.NORMAL;
+    const linear = 'linear';
+    motion.animations = [
+      el.breath.animate([
+        { opacity: 0.10, offset: 0 },
+        { opacity: p.peak, offset: 0.18 },
+        { opacity: 0.16, offset: 0.25 },
+        { opacity: p.second, offset: 0.34 },
+        { opacity: 0.10, offset: 0.46 },
+        { opacity: 0.10, offset: 1 }
+      ], { duration: p.duration, iterations: Infinity, easing: linear }),
+      el.hms.animate([
+        { transform: 'scale(1)', opacity: 1, offset: 0 },
+        { transform: 'scale(' + p.scale + ')', opacity: 1, offset: 0.18 },
+        { transform: 'scale(1)', opacity: p.dip, offset: 0.25 },
+        { transform: 'scale(' + (1 + (p.scale - 1) * 0.45) + ')', opacity: 1, offset: 0.34 },
+        { transform: 'scale(1)', opacity: 1, offset: 0.46 },
+        { transform: 'scale(1)', opacity: 1, offset: 1 }
+      ], { duration: p.duration, iterations: Infinity, easing: linear })
+    ];
+  }
+
   function setCountdownPhase(phase) {
     const panel = document.querySelector('.clock-panel');
-    if (!panel) return;
-    const ph = phase || 'IDLE';
+    const ph = String(phase || 'IDLE').toUpperCase();
+    if (!panel) { applyMotionPhase(ph); return; }
     panel.classList.remove('clock-armed', 'clock-phase-normal', 'clock-phase-warmup', 'clock-phase-surge', 'clock-phase-pulse', 'clock-phase-zero');
-    if (ph === 'IDLE') return;
-    panel.classList.add('clock-armed', 'clock-phase-' + ph.toLowerCase());
+    if (ph !== 'IDLE') panel.classList.add('clock-armed', 'clock-phase-' + ph.toLowerCase());
+    applyMotionPhase(ph);
   }
 
   TC.bus.on('boot', () => {
@@ -94,11 +186,21 @@
     el.ms = TC.$('clock-ms');
     el.date = TC.$('clock-date');
     el.ring = document.querySelector('.sec-ring rect');
+    el.breath = document.querySelector('.clock-breath');
+    motion.media = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    motion.reduced = !!(motion.media && motion.media.matches);
+    motion.supported = !!(el.breath && el.hms && typeof el.breath.animate === 'function' && typeof el.hms.animate === 'function');
+    if (motion.media) {
+      const onMotionPreference = () => applyMotionPhase(motion.phase);
+      if (motion.media.addEventListener) motion.media.addEventListener('change', onMotionPreference);
+      else if (motion.media.addListener) motion.media.addListener(onMotionPreference);
+    }
     TC.bus.on('phase', setCountdownPhase);
     TC.bus.on('cd:start', () => setCountdownPhase('NORMAL'));
     TC.bus.on('cd:advance', () => setCountdownPhase('NORMAL'));
     TC.bus.on('cd:stop', () => setCountdownPhase('IDLE'));
     TC.bus.on('cd:done', () => setCountdownPhase('IDLE'));
+    TC.bus.on('clockmode', () => applyMotionPhase(motion.phase));
     setCountdownPhase(TC.Countdown.info().phase);
     // 零点脉动：钟面形态下倒计时归零，整窗呼吸一次
     TC.bus.on('cd:zero', () => {

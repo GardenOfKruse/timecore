@@ -240,11 +240,14 @@
 
 - 已完成：星球场景支持横向拖拽切换镜头方向，可连续环绕 360°；普通点击仍触发击拍，拖拽不触发击拍。
 - 已完成：新增 cycle31 场景交互回归；既有拖拽缩放、太阳、流星、秒环、零点脉动、缩放记忆、钟面零渲染共 10/10 通过。
-- 已完成：布防后进入钟面时，边框按 NORMAL/WARMUP/SURGE/PULSE/ZERO 阶段变色并调整节奏；到点复用现有 zero-pulse，不增加新辉光。
-- 已完成：cycle31 增加“钟面布防态生效”断言，验证倒计时已开始后再进入时间窗口仍能正确呈现状态。
-- 未完成：尚未制作新版本号、提交或发布；当前保留为工作区改动，等待真机视觉确认。
+- 已完成：重做钟面布防动效为单一 ClockMotion/WAAPI 控制器：真实 DOM 呼吸边驱动主拍、时间数字做次拍；NORMAL/WARMUP/SURGE/PULSE 只改变节奏与状态色，秒环保持稳定；ZERO 单次释放，退出/停止立即取消。
+- 已完成：cycle31 的“钟面布防态生效”改为读取 `TC.Clock.debugMotion()`，确认真实动画对象存在，不再用 CSS.supports 或伪元素样式冒充运行证据。
+- 已完成：本轮改动定版为 v1.5.3，待提交并按唯一 draft Release 流程发布。
 - 下一步命令：`npm start`，主窗口拖动背景星球左右旋转；确认旋转手感后再决定是否发版。
 - 发布教训：electron-builder/CI 已会为 tag 自动创建 draft；正式发布只能 PATCH 该 draft 为 `draft:false`，不能另行 POST 创建同 tag Release，否则会产生重复 Release。修复时删除错误 Release、重推 tag，再按旧流程处理。
+- 本轮修复：钟面拖动增加渲染层 `dragActive` wheel 闸门，真实拖动期间不再发送缩放 IPC；星球镜头由单轴 yaw 改为带 ±66° 俯仰限制的球面 yaw/pitch 轨道，支持上下左右拖拽。
+- 本轮验证：cycle31 11/11、cycle30 17/17 通过；包含真实钟面动效取证、拖动 wheel 拦截、球面镜头 yaw/pitch 双轴变化与后台音频回归。
+- 本轮动效：仅钟面形态改为真实 DOM + WAAPI 的 Heartbeat Instrument，单时间线驱动边框呼吸与数字心动；阶段加速、ZERO 单次释放、`prefers-reduced-motion` 静态降级均已落地，未恢复钟面 3D 渲染。
 
 ## 未完成 / Todo（供后续循环）
 
