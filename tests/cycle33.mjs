@@ -108,6 +108,13 @@ await reloadWith('sunhour=6');
 const s6 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
 check('一日进度环：06 时 → 0.25', s6.dayFrac === 0.25 && s6.override === 6, s6);
 
+// H: 音景昼夜四态——节点 epoch 决定音阶（结构断言；听感属人工走查）
+const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+const dpAt = async h => JSON.parse(await js(`JSON.stringify(TC.Audio.debugDaypart(${midnight.getTime() + h * 3600000}))`));
+const dMorn = await dpAt(8), dDay = await dpAt(12), dEve = await dpAt(20), dNight = await dpAt(2);
+check('音景昼夜四态：08晨/12昼/20暮/02夜', dMorn.key === 'morning' && dDay.key === 'day' && dEve.key === 'evening' && dNight.key === 'night', { m: dMorn.key, d: dDay.key, e: dEve.key, n: dNight.key });
+check('四态频率表互异且 8 音', new Set([dMorn, dDay, dEve, dNight].map(x => x.rootHz)).size === 4 && [dMorn, dDay, dEve, dNight].every(x => x.freqs.length === 8), { roots: [dMorn.rootHz, dDay.rootHz, dEve.rootHz, dNight.rootHz] });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

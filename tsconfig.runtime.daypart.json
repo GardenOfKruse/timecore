@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/daypart-theme.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/audio/daypart-theme.ts"]
+}

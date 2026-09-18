@@ -53,6 +53,27 @@
 
   const ready = () => audioOutput.ready();
 
+  // 到点音景昼夜四态：按「节点时刻」的显示时区小时取音阶（预排发生在节点前 ≤63s，不能用调用时刻）
+  let fireFmtTz = null, fireFmt = null;
+  const fireHourCache = { k: 0, h: 12 };
+  function fireHour(e) {
+    const sec = Math.floor(e / 1000);
+    if (fireHourCache.k === sec) return fireHourCache.h;
+    const tz = (window.TC && TC.Clock) ? TC.Clock.tz : 'local';
+    try {
+      if (fireFmtTz !== tz) {
+        fireFmtTz = tz;
+        fireFmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz === 'local' ? undefined : tz, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+      const p = {};
+      for (const it of fireFmt.formatToParts(e)) p[it.type] = it.value;
+      if (p.hour === '24') p.hour = '00';
+      fireHourCache.h = (+p.hour) + (+p.minute) / 60 + (+p.second) / 3600;
+    } catch (_) { const d = new Date(e); fireHourCache.h = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; }
+    fireHourCache.k = sec;
+    return fireHourCache.h;
+  }
+
   const S = {
     tick(t) { osc('square', 1900, 1400, t, 0.03, 0.10, 'beat'); },   // 走提示音轨：受「提示音量」滑杆控制
     beep(k, t) {   // 3/2/1 递升
@@ -60,16 +81,17 @@
       osc('triangle', f, f, t, 0.10, 0.30, 'beat');
       osc('sine', f * 2, f * 2, t, 0.07, 0.10, 'beat');
     },
-    fire(t) {
+    fire(t, nodeEpoch) {
       // 到点音景（signature moment）三层：
       // ① sub 冲击：下坠正弦 + 二次谐波体 + 低频砰，撑起「释放」的物理感
       osc('sine', 82, 36, t, 0.9, 0.55, 'cue');
       osc('sine', 120, 60, t + 0.02, 0.35, 0.28, 'cue');
       noise(t, 0.5, 0.20, 180, 0.8, 'cue');
       noise(t, 0.9, 0.20, 4200, 0.5, 'cue');   // 高频空气感，拉出空间
-      // ② 五声音阶琶音（C D E G A C…）逐音上扬，左右声像交替展开 + 镜像泛音 + 反声像幽灵回声
-      const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5];
-      PENTA.forEach((f, i) => {
+      // ② 昼夜四态五声琶音（晨 C 大 / 昼 G 大 / 暮 E 小 / 夜 D 小，按节点时刻自动换色），
+      //    逐音上扬，左右声像交替展开 + 镜像泛音 + 反声像幽灵回声
+      const theme = TimeCoreDomain.daypartTheme(fireHour(nodeEpoch));
+      theme.freqs.forEach((f, i) => {
         const tt = t + 0.03 + i * 0.055;
         const pan = (i % 2 ? 1 : -1) * Math.min(0.7, 0.25 + i * 0.06);
         osc('triangle', f, f, tt, 0.8 - i * 0.04, 0.16 - i * 0.008, 'cue', pan);
@@ -118,7 +140,7 @@
     for (const item of plan) {
       const tt = item.audioTime;
       if (item.kind === 'fire') {
-        S.fire(tt);
+        S.fire(tt, cd.target);
       } else if (item.kind === 'beep') {
         S.beep(item.beatIndex, tt);
       } else {
@@ -148,7 +170,7 @@
     // 双保险：调度器没排上（如音频被挂起）就在事件现场补放——fire key 现已正确登记，不会双响
     if (!scheduleCoordinator.hasFireKey(target)) {
       if (!ensure()) return;
-      if (ready()) S.fire(audioOutput.currentTime());
+      if (ready()) S.fire(audioOutput.currentTime(), target);
     }
   });
   TC.bus.on('cd:start', () => { scheduleCoordinator.clearScheduled(); });
@@ -169,7 +191,12 @@
     get tickOn() { return tickOn; },
     info() {
       const ci = TC.Countdown.info();
-      return { state: audioOutput.state(), muted, vol, tickOn, softLead, metroFull, worker: audioOutput.workerActive(), scheduled: scheduleCoordinator.scheduledSize(), queued: audioOutput.queuedCount(), hasFireKey: scheduleCoordinator.hasFireKey(ci.target) };
+      return { state: audioOutput.state(), muted, vol, tickOn, softLead, metroFull, worker: audioOutput.workerActive(), scheduled: scheduleCoordinator.scheduledSize(), queued: audioOutput.queuedCount(), hasFireKey: scheduleCoordinator.hasFireKey(ci.target), daypart: TimeCoreDomain.daypartFor(fireHour(TC.time.epoch())) };
+    },
+    // 测试/调试钩子：给定节点 epoch 返回该时刻到点音景将使用的昼夜音阶（结构断言用）
+    debugDaypart(nodeEpoch) {
+      const th = TimeCoreDomain.daypartTheme(fireHour(nodeEpoch));
+      return { key: th.key, rootHz: th.rootHz, freqs: th.freqs };
     },
     // 测试/调试钩子：手动以指定预排窗口跑一次调度器（验证批量机制）
     debugSched(lookMs) { if (ensure()) scheduleCd(TC.time.epoch(), lookMs || 220); },
