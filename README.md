@@ -4,7 +4,7 @@
 
 开源协议 MIT · Windows 桌面端（Electron）· 浏览器直接打开也可运行
 
-![TIMECORE 星球核心](docs/planet-night.png)
+![TIMECORE 星球核心](docs/images/planet-night.png)
 
 *午夜的满月悬在星球与镜头之间，冷光洒在夜半球上；一日进度环在外圈缓缓填满，星野闪烁、卫星拖着光尾——桌面上的一片深空，跟着真实时间一起呼吸。*
 

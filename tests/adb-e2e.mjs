@@ -220,7 +220,7 @@ const magMove = await cdpJson(`(() => {
 await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: magMove.x, y: magMove.y });
 await new Promise(r => setTimeout(r, 400));
 const shot = await call('Page.captureScreenshot', { format: 'png' });
-writeFileSync(new URL('../docs/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
-console.log('== 截图 == docs/adb-e2e.png');
+writeFileSync(new URL('../docs/images/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
+console.log('== 截图 == docs/images/adb-e2e.png');
 ws.close();
 process.exit(0);

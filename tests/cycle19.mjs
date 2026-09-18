@@ -128,8 +128,8 @@ check('A 空闲态：开始/停止', s0.startTxt === '开始' && s0.stopDisabled
 check('A 标题栏状态灯存在', s0.lights, s0);
 
 const shot = await call('Page.captureScreenshot', { format: 'png' });
-writeFileSync(path.join(ROOT, 'docs', 'welcome.png'), Buffer.from(shot.data, 'base64'));
-console.log('== 截图 == docs/welcome.png');
+writeFileSync(path.join(ROOT, 'docs', 'images', 'welcome.png'), Buffer.from(shot.data, 'base64'));
+console.log('== 截图 == docs/images/welcome.png');
 
 // 开始/停止状态化：10s 对齐 → 运行态；停止 → 空闲态
 await js(`document.querySelector('.chip-btn[data-sec="10"]').click()`);

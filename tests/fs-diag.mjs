@@ -85,8 +85,8 @@ http.get(`http://127.0.0.1:${PORT}/json`, res => {
       ws.addEventListener('message', h);
       setTimeout(() => reject(new Error('shot timeout')), 15000);
     });
-    writeFileSync(new URL('../docs/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
-    console.log('截图: docs/adb-e2e.png');
+    writeFileSync(new URL('../docs/images/adb-e2e.png', import.meta.url), Buffer.from(shot.data, 'base64'));
+    console.log('截图: docs/images/adb-e2e.png');
 
     process.exit(0);
   });
