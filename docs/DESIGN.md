@@ -1,7 +1,7 @@
 # TIMECORE 产品设计文档
 
 > 悬浮式三维时间核心 · Windows 桌面时间装置
-> 仓库：GardenOfKruse/timecore · 当前版本：v1.2.4 · 文档基准：2026-09-14
+> 仓库：GardenOfKruse/timecore · 当前版本：v1.6.0 · 文档基准：2026-09-19
 > 循环开发守则见 `docs/PROGRESS.md`（每次循环先读它 + git status，结束必须回写）
 
 ---
@@ -104,11 +104,11 @@
 - **到点流星雨（v1.4.1）**：cd:zero 时星野 uBoost 瞬时 2.2 后指数回落（~2s），三颗流星 120/320/520ms 错峰齐落——与到点音景合成完整仪式；属瞬时辉光配额。
 - **星空生动化（v1.3.3）**：远景星野 320 颗（自定义点 shader，aPhase 错相慢闪烁，半径 22–44 球壳，低画质隐藏）+ 流星（30–90s 随机一颗，拉伸光斑 0.9s 划过，TC.Scene.meteor() 强制触发）。
 - **开场仪式（v1.3.1）**：主进程 show:false → ready-to-show 再显示；body bootIn 320ms；欢迎卡 wlIn；核心 intensity 从 0 充能到 IDLE（约 1s）。
-- 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v150）。
+- 缓存：所有 css/js 引用带 `?v=N`，每次改动递增（当前 v165）。
 
 ## 4. 架构
 
-- **零框架**：vanilla JS 模块 IIFE + TC 命名空间（core/time-sync/clock/countdown/beats/audio/scene3d/ui/adb/main），three.js 仅 3D。
+- **零框架**：vanilla JS IIFE + TC 命名空间外壳；业务逻辑位于 TypeScript 模块层（v1.6.0 起）——`src/domain/` 纯计算、`src/application/` 跨模块编排、`src/adapters/` 浏览器/Electron 副作用，36 个模块各自经独立 runtime tsconfig 构建为 `js/generated/*.js` 由 `index.html` 按序加载；`js/*.js` 仅保留兼容桥接与 DOM/IPC 编排；three.js 仅 3D。
 - **双驱动循环**：rAF 只渲染 3D；逻辑与 DOM 由 66ms setInterval + 120ms 看门狗驱动（后台/隐藏不冻结）。
 - **钟面零渲染（v1.5.0）**：body.clockmode 时 render() 整帧早退（display:none 的 canvas 上 WebGL 仍跑全管线，实测 42 calls/1.7 万 tris/帧）——悬浮钟形态 GPU 近零；skipStreak/lastFrame 暴露于 TC.Scene.debugSun()。
 - **IPC**（electron/main.js 'win' 通道）：top/opacity/minimize/fullscreen/size/clock形态/clock-zoom/move-begin/move-end/open(GitHub 白名单)/close；win:get 返回 {top,fs,ver,clock}；主进程 `win:state` 推送（形态/全屏/置顶变化即时下发）；adb:detect|exec|download。
@@ -118,8 +118,8 @@
 ## 5. 测试基建（tests/）
 
 - CDP 直连 Electron 渲染进程（`--remote-debugging-port=92XX`），`TC_TMP_PROFILE` 隔离 userData（**绝不碰真实配置**）。
-- cycle19 首启动/回归 23 项；cycle21 双发回归 9；cycle24 旧 adb 升级链路 8（显式检测 E:\Tools\adb 1.0.36 构造场景）；cycle26 设备标注移除 6；cycle27 连点优化 7；cycle30 形态/悬浮钟/音频批量 14。
-- 发版前全量：`for t in 19 21 24 26 27 30; do node tests/cycle$t.mjs; done`
+- cycle19 首启动/回归 23 项；cycle21 双发回归 9；cycle24 旧 adb 升级链路 8；cycle26 设备标注移除 6；cycle27 连点优化 7；cycle30 形态/悬浮钟/音频批量 17；cycle31 太阳/星空/秒环/缩放记忆 11；cycle32 钟面长按缩放安全 2。
+- 领域契约：`tests/*.test.cjs` 36 文件 674 断言，`npm run test:domain`（先 build:domain 再全量）；发版前全量：`for t in 19 21 24 26 27 30 31 32; do node tests/cycle$t.mjs; done`
 - **已知坑**：
   - 真实鼠标必须 `Input.dispatchMouseEvent`（合成 dispatchEvent 绕过输入管线——拖拽区 BUG 就是这么漏测的）
   - Runtime.evaluate 需要 `awaitPromise: true`（否则 Promise 序列化为 {}）

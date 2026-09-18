@@ -249,11 +249,19 @@
 - 本轮验证：cycle31 11/11、cycle30 17/17 通过；包含真实钟面动效取证、拖动 wheel 拦截、球面镜头 yaw/pitch 双轴变化与后台音频回归。
 - 本轮动效：仅钟面形态改为真实 DOM + WAAPI 的 Heartbeat Instrument，单时间线驱动边框呼吸与数字心动；阶段加速、ZERO 单次释放、`prefers-reduced-motion` 静态降级均已落地，未恢复钟面 3D 渲染。
 
+## 循环 #50（v1.6.0 架构模块化基线）✅ 已完成（2026-09-19）
+
+- 架构：渐进式 TypeScript 模块化重构收口——业务纯计算收窄进 `src/domain`，跨模块编排进 `src/application`，浏览器/Electron 副作用进 `src/adapters`；`js/*.js` 仅保留兼容桥接与 DOM/IPC 编排。36 个运行时模块各配独立 runtime tsconfig → `js/generated/` 产物按序加载，零打包器、浏览器直开架构不变。
+- 契约：`tests/*.test.cjs` 36 个文件 674 断言全绿（`npm run test:domain` = 构建 + 全量）；核心不变量（绝对节点、显示不回跳、66ms+120ms 双驱动、发射去重、钟面长按不误缩放、ADB 可用性/生命周期/连接编排）均有专属模块锁定。
+- 回归：cycle19 23/23、21 9/9、24 8/8、26 6/6、27 7/7、30 17/17、31 11/11、32 2/2；真机 `adb-e2e` 通过（adb 1.0.41 检测、1080×2340 截图、等比例 0.461/0.462、受信选点、真实试射 118ms、改名/动作/开关持久化）。
+- 发版：v1.6.0（架构基线，无用户可见行为变化）；行为红线（绝对 epoch、显示不回跳、到点必触发）经全量回归确认未变。
+
 ## 未完成 / Todo（供后续循环）
 
-- [ ] 可选：粒子用 InstancedBufferGeometry 进一步降耗
+- [ ] 每日击拍统计面板（DESIGN §7 backlog）
+- [ ] 音效主题包（DESIGN §7 backlog）
+- [ ] 局域网伴侣页（DESIGN §7 backlog）
 - [ ] 可选：倒计时列表多目标并行（当前为单节点序列 + 多周期）
-- [ ] 可选：Electron 安装包打包（electron-builder）
 - [ ] 可选：接入真实 NTP（需后端/原生层，HTTP 源精度 ±RTT/2）
 
 ## 下一步命令（若中断，从这里继续）

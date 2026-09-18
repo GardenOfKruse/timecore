@@ -65,8 +65,10 @@ js/adb.js        ADB 齐射（设备管理/模板动作/截图选点/节点调�
 js/ui.js, main.js, test.js
 electron/        桌面外壳（置顶/透明/全屏 + adb 下载与执行 IPC）
 scripts/         make-icon.mjs（应用图标生成）
-tests/           cycle19|21|24|26|27|30.mjs 六组 CDP 回归套件（六模式/钟面/音频批量/ADB 链路）
+tests/           cycle19|21|24|26|27|30|31|32.mjs CDP 回归套件（六模式/钟面/音频批量/ADB 链路/缩放安全）+ 36 个领域契约测试（674 断言）
 ```
+
+**模块化（v1.6.0 起）**：业务逻辑位于 `src/`（TypeScript：`domain/` 纯计算、`application/` 编排、`adapters/` 浏览器与 Electron 副作用），构建为 `js/generated/*.js` 按序加载；`js/*.js` 保留为兼容桥接与 DOM/IPC 编排。`npm run test:domain` 串构建与全量契约。
 
 **时间设计**：显示时间 = 单调时钟 + 校准偏移（免疫系统时钟跳变）；偏移变化限速平滑（显示永不倒退）；倒计时与节拍全部基于 epoch 绝对节点，后台标签页/最小化由看门狗兜底触发。
 
