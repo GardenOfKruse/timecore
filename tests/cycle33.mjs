@@ -128,6 +128,21 @@ const st1 = JSON.parse(await js(`JSON.stringify(TC.Beats.debugStats())`));
 const domTxt = await js(`document.getElementById('beat-stats').textContent`);
 check('每日击拍统计：击拍入库 +1 + 抽屉展示', beatRec.label !== null && st1.today && st1.today.count === (st0.today ? st0.today.count : 0) + 1 && /今日击拍 \d/.test(domTxt), { label: beatRec.label, c0: st0.today && st0.today.count, c1: st1.today && st1.today.count, domTxt });
 
+// J: 整点深呼吸——强制触发 +1、布防让位规则生效
+const hp0 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`)).hourPulses;
+const hpForced = await js(`TC.Scene.hourPulse()`);
+const hp1 = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`)).hourPulses;
+check('整点深呼吸：强制触发 +1', hpForced === true && hp1 === hp0 + 1, { hp0, hp1 });
+const hpBlocked = await js(`(async () => {
+  TC.Countdown.startSingle(TC.time.epoch() + 60000);   // 布防中
+  await new Promise(r2 => setTimeout(r2, 300));
+  const denied = TC.Scene.hourPulse();
+  TC.Countdown.stop();
+  await new Promise(r2 => setTimeout(r2, 200));
+  return { denied, allowedAfter: TC.Scene.hourPulse() };
+})()`);
+check('整点深呼吸：布防期间让位、停止后恢复', hpBlocked.denied === false && hpBlocked.allowedAfter === true, hpBlocked);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

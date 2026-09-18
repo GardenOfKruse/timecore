@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "None",
+    "outFile": "js/generated/hour-crossing.js",
+    "noEmit": false
+  },
+  "include": [],
+  "files": ["src/domain/clock/hour-crossing.ts"]
+}

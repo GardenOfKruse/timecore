@@ -105,6 +105,19 @@
     dayRing.geometry = new THREE.RingGeometry(4.75, 4.85, 160, 1, Math.PI / 2 - frac * Math.PI * 2, frac * Math.PI * 2);
   }
 
+  /* ---------- 整点深呼吸（v1.10.0）：绝对节点哲学下沉到小时尺度，纯视觉无声音 ---------- */
+  let lastHourEpoch = Date.now();   // 注意：传给 hourCrossed 的是真实 epoch，不是小时桶号
+  let hourPulseCount = 0;
+  function updateHourPulse(e) {
+    if (!TimeCoreDomain.hourCrossed(lastHourEpoch, e)) return;
+    lastHourEpoch = e;
+    const cd = (window.TC && TC.Countdown) ? TC.Countdown.info() : null;
+    if (cd && cd.armed && !cd.fired) return;   // 布防期间让位给倒计时阶段表现
+    spawnShock(2.0, new THREE.Color(0x39d7ff), 0.35);
+    kickParticles(4, 0.25);
+    hourPulseCount++;
+  }
+
   const cur = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const tgt = { color: new THREE.Color(), intensity: 0.5, pSpeed: 1 };
   const FIXED_COL = { WARMUP: 0xffb347, SURGE: 0xff8c3b, PULSE: 0xff4d5e, ZERO: 0xffffff };
@@ -692,6 +705,7 @@
     updateSun(ctx.epoch);   // 星球昼夜随真实时间转
     updateMoon(ctx.epoch);  // 月亮按真实朔望周期绕行
     updateDayRing(ctx.epoch);   // 一日进度环随本地时间填充
+    updateHourPulse(ctx.epoch);   // 整点深呼吸（布防时让位）
     if (starMat) {
       starMat.uniforms.uTime.value = t;
       starMat.uniforms.uBoost.value += (1 - starMat.uniforms.uBoost.value) * (1 - Math.exp(-dt * 1.8));   // 增亮后缓慢回落
@@ -831,10 +845,20 @@
         skipStreak: hiddenFrames,
         lastFrame: lastFrameInfo,
         trails: sats.filter(s => s.trail && s.trail.visible).length,
-        dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null
+        dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null,
+        hourPulses: hourPulseCount
       } : null;
     },
     meteor() { if (meteor && quality > 0) { spawnMeteor(); return true; } return false; },
+    // 测试钩子：强制触发一次整点深呼吸（真实整点边界等不起）
+    hourPulse() {
+      const cd = (window.TC && TC.Countdown) ? TC.Countdown.info() : null;
+      if (cd && cd.armed && !cd.fired) return false;   // 与真实路径同样的让位规则
+      spawnShock(2.0, new THREE.Color(0x39d7ff), 0.35);
+      kickParticles(4, 0.25);
+      hourPulseCount++;
+      return true;
+    },
     // 调试探针：真实月相状态（测试/截图验证用，无 UI 暴露）
     debugMoon() {
       const st = scene && scene.userData.moonPhase;
