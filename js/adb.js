@@ -305,7 +305,12 @@
       getAdbPath: () => availabilityState().path,
       save,
       render: renderActions,
-      log
+      log,
+      // 截图存档（v1.20.0）：按动作 id 落盘 userData/adb-shots/，重启后打开浮层仍能看到当时的截图
+      shotStore: hasElectron ? {
+        save: (name, b64) => window.electronAPI.adb('shot-save', { name, b64 }),
+        load: name => window.electronAPI.adb('shot-load', { name })
+      } : undefined
     });
   }
   initScreenshotController();

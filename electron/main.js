@@ -273,6 +273,36 @@ ipcMain.handle('adb:exec', (e, payload) => {
   return runProcess(path || 'adb', Array.isArray(args) ? args : [], timeoutMs, !!binary);
 });
 
+/* 选点截图存档（v1.20.0）：按动作 id 存 userData/adb-shots/<id>.png，重启后打开浮层仍能看到当时的截图 */
+function shotsDir() {
+  return pathM.join(app.getPath('userData'), 'adb-shots');
+}
+function validShotName(name) {
+  return /^[a-z0-9_-]{1,64}$/i.test(String(name || ''));
+}
+ipcMain.handle('adb:shot-save', (e, payload) => {
+  try {
+    const { name, b64 } = payload || {};
+    if (!validShotName(name) || typeof b64 !== 'string' || b64.length < 100) return { ok: false };
+    fs.mkdirSync(shotsDir(), { recursive: true });
+    fs.writeFileSync(pathM.join(shotsDir(), name + '.png'), Buffer.from(b64, 'base64'));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err).slice(0, 80) };
+  }
+});
+ipcMain.handle('adb:shot-load', (e, payload) => {
+  try {
+    const name = (payload || {}).name;
+    if (!validShotName(name)) return { ok: false };
+    const p = pathM.join(shotsDir(), name + '.png');
+    if (!fs.existsSync(p)) return { ok: false, error: 'none' };
+    return { ok: true, b64: fs.readFileSync(p).toString('base64') };
+  } catch (err) {
+    return { ok: false, error: String(err).slice(0, 80) };
+  }
+});
+
 /* 一键下载官方 platform-tools（约 6MB），解压到 userData，用户无需自行安装 adb */
 ipcMain.handle('adb:download', async () => {
   try {

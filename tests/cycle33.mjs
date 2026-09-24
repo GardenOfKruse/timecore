@@ -171,6 +171,17 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// R: 选点截图存档——真实 IPC 磁盘往返
+const shotRT = JSON.parse(await js(`(async () => {
+  const b64 = btoa('CYCLE33-SHOT-ARCHIVE-ROUNDTRIP'.repeat(12));
+  const s = await electronAPI.adb('shot-save', { name: 'cycle33test', b64 });
+  const l = await electronAPI.adb('shot-load', { name: 'cycle33test' });
+  const miss = await electronAPI.adb('shot-load', { name: 'no-such-shot' });
+  const bad = await electronAPI.adb('shot-save', { name: '../evil', b64 });
+  return JSON.stringify({ save: s.ok, loadOk: l.ok, match: l.b64 === b64, missOk: miss.ok, evilRejected: bad.ok === false });
+})()`));
+check('选点截图存档：磁盘往返 + 路径注入拒绝', shotRT.save === true && shotRT.loadOk === true && shotRT.match === true && shotRT.missOk === false && shotRT.evilRejected === true, shotRT);
+
 // Q: 远期目标日定时——选定日期的绝对时刻
 const farT = JSON.parse(await js(`(async () => {
   const d = new Date(Date.now() + 7 * 86400000);

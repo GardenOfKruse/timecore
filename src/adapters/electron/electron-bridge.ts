@@ -18,7 +18,7 @@ const WINDOW_COMMANDS: ReadonlySet<string> = new Set([
   'top', 'opacity', 'minimize', 'fullscreen', 'size',
   'move-begin', 'move-end', 'clock-button', 'clock-zoom', 'open', 'close'
 ]);
-const ADB_COMMANDS: ReadonlySet<string> = new Set(['detect', 'exec', 'download']);
+const ADB_COMMANDS: ReadonlySet<string> = new Set(['detect', 'exec', 'download', 'shot-save', 'shot-load']);
 
 function sendWindow(ipc: ElectronIpcPort, command: string, arg?: unknown): void {
   // preload 是 renderer 的 capability 边界；未知窗口命令静默丢弃，保持主进程旧的 no-op 语义。

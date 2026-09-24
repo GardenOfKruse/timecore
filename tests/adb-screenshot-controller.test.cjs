@@ -80,7 +80,38 @@ const controller = createAdbScreenshotController({
   await failed.open({ id: 'failed', name: '失败动作' }, { capture: true });
   assert.equal(failedLogs[0], '截屏失败：permission denied');
 
-  console.log('adb-screenshot-controller contract: 23 assertions passed');
+  // ---- 截图存档（v1.20.0）：截屏即存档、重启后（无内存 _shot）打开自动恢复、存档未命中回落重新截屏 ----
+  const stored = {};
+  let savedName = null;
+  const archived = createAdbScreenshotController({
+    executor: {
+      exec() { calls.push('archived-exec'); return Promise.resolve({ ok: true, b64: 'y'.repeat(150) }); }
+    },
+    picker: { open: target => picks.push('archived:' + target.id) },
+    targets: { resolve: () => device },
+    getAdbPath: () => 'adb.exe',
+    save: () => {},
+    render: () => {},
+    log: () => {},
+    shotStore: {
+      save(name, b64) { savedName = name; stored[name] = b64; return { ok: true }; },
+      async load(name) { return name in stored ? { ok: true, b64: stored[name] } : { ok: false, error: 'none' }; }
+    }
+  });
+  const fresh = { id: 'shot-9', name: '存档动作', x: 100, y: 200 };
+  await archived.open(fresh, { capture: true, show: false });
+  assert.equal(savedName, 'shot-9');                       // 截屏成功即自动存档
+  assert.equal(stored['shot-9'].length, 150);
+  const reopened = { id: 'shot-9', name: '存档动作', x: 100, y: 200 };   // 模拟重启：内存 _shot 已失
+  await archived.open(reopened, { show: true });
+  assert.equal(reopened._shot.length, 150);                // 从存档恢复当时的截图
+  assert.deepEqual(picks.slice(-1), ['archived:shot-9']);  // 直接打开浮层，未重新截屏
+  assert.equal(calls.filter(c => c === 'archived-exec').length, 1);   // 恢复路径零 exec
+  const missed = { id: 'shot-404', name: '无存档', x: 1, y: 2 };
+  await archived.open(missed, { capture: false, show: false });         // 存档未命中 → 回落重新截屏
+  assert.equal(missed._shot.length, 150);
+
+  console.log('adb-screenshot-controller contract: 31 assertions passed');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

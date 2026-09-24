@@ -33,11 +33,36 @@ var TimeCoreDomain;
                 action.x = Math.round(action.shotW / 2);
                 action.y = Math.round(action.shotH / 2);
             }
+            if (options.shotStore) {
+                try {
+                    void options.shotStore.save(String(action.id), b64);
+                }
+                catch (_) { /* 存档失败不阻塞选点流程 */ }
+            }
             options.render();
             options.log('已截取 ' + (device.name || device.serial) + ' 屏幕，点击截图选点');
             return true;
         }
+        // 从磁盘存档恢复当时的截图（应用重启后内存 _shot 已失，但存档还在）
+        async function restore(action) {
+            if (!options.shotStore)
+                return false;
+            try {
+                const r = await options.shotStore.load(String(action.id));
+                if (r && r.ok === true && typeof r.b64 === 'string' && r.b64.length > 100) {
+                    action._shot = r.b64;
+                    return true;
+                }
+            }
+            catch (_) { /* 读取失败静默降级为重新截屏 */ }
+            return false;
+        }
         async function open(action, openOptions = {}) {
+            if (!isShot(action) && (await restore(action))) {
+                if (openOptions.show !== false)
+                    options.picker.open(action);
+                return;
+            }
             const shouldCapture = openOptions.capture === true || !isShot(action);
             if (shouldCapture && !(await capture(action)))
                 return;
