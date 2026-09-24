@@ -16,7 +16,7 @@ export interface ElectronBridge {
 
 const WINDOW_COMMANDS: ReadonlySet<string> = new Set([
   'top', 'opacity', 'minimize', 'fullscreen', 'size',
-  'move-begin', 'move-end', 'clock-button', 'clock-zoom', 'open', 'close'
+  'move-begin', 'move-end', 'clock-button', 'clock-zoom', 'open', 'flash', 'close'
 ]);
 const ADB_COMMANDS: ReadonlySet<string> = new Set(['detect', 'exec', 'download', 'shot-save', 'shot-load']);
 

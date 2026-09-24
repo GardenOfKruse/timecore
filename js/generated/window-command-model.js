@@ -46,6 +46,7 @@ var TimeCoreDomain;
                 const url = externalUrl(arg);
                 return url === null ? null : { type: 'open', url };
             }
+            case 'flash': return { type: 'flash' }; // 到点任务栏闪烁（v1.22.0）：窗口最小化/失焦时吸引注意
             case 'close': return { type: 'close' };
             default: return null;
         }

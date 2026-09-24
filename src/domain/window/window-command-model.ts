@@ -16,6 +16,7 @@ export type WindowCommandIntent =
   | { type: 'set-left-button'; held: boolean }
   | { type: 'zoom-clock'; delta: number; buttons: number }
   | { type: 'open'; url: string }
+  | { type: 'flash' }
   | { type: 'close' };
 
 export interface WindowCommandModel {
@@ -68,10 +69,10 @@ function route(command: unknown, arg?: unknown): WindowCommandIntent | null {
       const input = zoomInput(arg);
       return { type: 'zoom-clock', delta: input.delta, buttons: input.buttons };
     }
-    case 'open': {
-      const url = externalUrl(arg);
+    case 'open': {      const url = externalUrl(arg);
       return url === null ? null : { type: 'open', url };
     }
+    case 'flash': return { type: 'flash' };   // 到点任务栏闪烁（v1.22.0）：窗口最小化/失焦时吸引注意
     case 'close': return { type: 'close' };
     default: return null;
   }

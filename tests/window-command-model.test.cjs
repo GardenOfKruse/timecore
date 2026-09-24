@@ -25,6 +25,7 @@ assert.deepEqual(model.route('open', 'https://github.com/GardenOfKruse/timecore/
 });
 assert.equal(model.route('open', 'https://example.com'), null);
 assert.equal(model.route('open', 'http://github.com/GardenOfKruse/timecore'), null);
+assert.deepEqual(model.route('flash'), { type: 'flash' });   // v1.22.0 到点任务栏闪烁
 assert.deepEqual(model.route('close'), { type: 'close' });
 assert.equal(model.route('unknown'), null);
 

@@ -3,7 +3,7 @@ var TimeCoreDomain;
 (function (TimeCoreDomain) {
     const WINDOW_COMMANDS = new Set([
         'top', 'opacity', 'minimize', 'fullscreen', 'size',
-        'move-begin', 'move-end', 'clock-button', 'clock-zoom', 'open', 'close'
+        'move-begin', 'move-end', 'clock-button', 'clock-zoom', 'open', 'flash', 'close'
     ]);
     const ADB_COMMANDS = new Set(['detect', 'exec', 'download', 'shot-save', 'shot-load']);
     function sendWindow(ipc, command, arg) {

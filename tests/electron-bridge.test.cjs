@@ -26,8 +26,10 @@ const ipc = {
   assert.deepEqual(sent[0], { channel: 'win', args: ['top', undefined] });
   bridge.send('size', { preset: 'clock' });
   assert.deepEqual(sent[1], { channel: 'win', args: ['size', { preset: 'clock' }] });
+  bridge.send('flash');
+  assert.deepEqual(sent[2], { channel: 'win', args: ['flash', undefined] });
   bridge.send('not-a-window-command');
-  assert.equal(sent.length, 2);
+  assert.equal(sent.length, 3);
 
   assert.deepEqual(await bridge.get(), { channel: 'win:get', args: [] });
   assert.deepEqual(invoked[0], { channel: 'win:get', args: [] });
@@ -51,7 +53,7 @@ const ipc = {
   await assert.rejects(() => bridge.adb(null), /bad adb cmd/);
   assert.equal(invoked.length, 4);
 
-  console.log('electron-bridge contract: 15 assertions passed');
+  console.log('electron-bridge contract: 16 assertions passed');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

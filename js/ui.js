@@ -470,6 +470,7 @@
       firedSaveTimer = setTimeout(() => { try { localStorage.setItem('tc.cdstats.v1', firedStats.serialize()); } catch (_) {} }, 800);
       renderFiredStats();
       if (r.milestone) TC.Scene.meteor();
+      if (window.electronAPI) window.electronAPI.send('flash');   // 最小化/失焦时任务栏闪烁（主进程自行判断焦点状态）
     });
     TC.bus.on('cd:advance', d => toast('第 ' + d.cycleIndex + ' 轮 · ' + fmtTrigger(TC.Countdown.info().target)));
     TC.bus.on('cd:done', () => toast('全部周期完成 ✓'));

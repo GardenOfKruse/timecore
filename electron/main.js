@@ -115,6 +115,7 @@ function createWindow() {
   // 外部途径引起的全屏变化（如 HTML5 全屏）也要回写显式状态
   win.on('enter-full-screen', () => { fsState = true; });
   win.on('leave-full-screen', () => { fsState = false });
+  win.on('focus', () => { try { win.flashFrame(false); } catch (_) {} });   // 用户回到窗口即停止任务栏闪烁
   win.webContents.on('context-menu', showContextMenu);   // 右键菜单（钟面形态的主入口：拖拽区不透传鼠标事件）
   win.loadFile(pathM.join(__dirname, '..', 'index.html'));
 }
@@ -228,6 +229,7 @@ ipcMain.on('win', (ev, cmd, arg) => {
     case 'set-left-button': leftButtonHeld = intent.held; break;
     case 'zoom-clock': zoomClock(intent); break;
     case 'open': shell.openExternal(intent.url); break;
+    case 'flash': if (win && (!win.isFocused() || win.isMinimized())) win.flashFrame(true); break;   // 到点任务栏闪烁；聚焦即停
     case 'close': win.close(); break;
   }
 });
