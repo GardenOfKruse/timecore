@@ -79,5 +79,13 @@ const { createBeatStats } = globalThis.TimeCoreDomain;
   ok(s8.summary('2026-09-19').today.count === 5 && s8.summary('2026-09-19').bestHour === null);
   ok(s8.summary('2026-09-19').today.hours.length === 24 && s8.summary('2026-09-19').today.hours.every(h => h === 0));
 
+  // CSV 导出（v1.23.0）：表头 + 日期升序行 + 准确率列
+  const csv = s1.serializeCsv();
+  const rows = csv.split('\r\n');
+  ok(rows[0] === 'date,count,max_combo,perfect,great,good,miss,accuracy_percent');
+  ok(rows[1] === '2026-09-18,1,3,0,0,1,0,40');
+  ok(rows.length === 3 && rows[2].startsWith('2026-09-19,3,2,1,1,0,1,57'));
+  ok(createBeatStats().serializeCsv() === 'date,count,max_combo,perfect,great,good,miss,accuracy_percent');
+
   console.log(`beat-stats contract: ${n} assertions passed`);
 })();

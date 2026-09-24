@@ -58,6 +58,6 @@
     return Object.assign(beatJudge.stats(), { freerun: st.freerun });
   }
 
-  TC.Beats = { hit, stats, toggleFreerun, labelFor: beatJudge.labelFor, COLORS: beatJudge.colors, debugStats: () => beatStats.summary(dateKey(Date.now())) };
+  TC.Beats = { hit, stats, toggleFreerun, labelFor: beatJudge.labelFor, COLORS: beatJudge.colors, debugStats: () => beatStats.summary(dateKey(Date.now())), exportCsv: () => beatStats.serializeCsv() };
   renderStats();
 })();

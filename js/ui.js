@@ -41,6 +41,14 @@
     const keys = Object.keys(sum.days).sort().slice(-7);
     box.title = '每日到点统计（本地保存 30 天）\n近 7 日：' + keys.map(k => k.slice(5) + ' ' + sum.days[k].count + ' 次').join('，');
   }
+  // 统计导出 CSV（v1.23.0）：CSV 生成在域模块，这里只负责触发下载
+  function downloadCsv(name, csv) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
 
   function toast(msg, ms) {
     el.toast.textContent = msg;
@@ -256,6 +264,10 @@
       pkSel.value = TC.Audio.packKey;
       pkSel.addEventListener('change', () => { TC.Audio.setPack(pkSel.value); toast('音效主题：' + TC.Audio.debugSoundPack().label); });
     }
+    const expBeats = document.getElementById('exp-beats');
+    if (expBeats) expBeats.addEventListener('click', () => downloadCsv('timecore-beats.csv', TC.Beats.exportCsv()));
+    const expCd = document.getElementById('exp-cd');
+    if (expCd) expCd.addEventListener('click', () => { try { downloadCsv('timecore-countdown.csv', firedStats.serializeCsv()); } catch (_) {} });
     el.softlead.value = TC.Audio.softLead;
     el.softlead.addEventListener('input', () => TC.Audio.setSoftLead(el.softlead.value));
     const mf = document.getElementById('set-metrofull');

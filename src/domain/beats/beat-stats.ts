@@ -104,7 +104,17 @@ namespace TimeCoreDomain {
       return JSON.stringify({ v: 1, days });
     }
 
-    return { load, record, summary, serialize, accuracy };
+    // 击拍统计导出 CSV（v1.23.0）：按日期升序，含准确率列
+    function serializeCsv(): string {
+      const lines = ['date,count,max_combo,perfect,great,good,miss,accuracy_percent'];
+      for (const k of Object.keys(days).sort()) {
+        const d = days[k];
+        lines.push([k, d.count, d.maxCombo, d.perfect, d.great, d.good, d.miss, accuracy(d)].join(','));
+      }
+      return lines.join('\r\n');
+    }
+
+    return { load, record, summary, serialize, serializeCsv, accuracy };
   }
 }
 (globalThis as typeof globalThis & { TimeCoreDomain: typeof TimeCoreDomain }).TimeCoreDomain = TimeCoreDomain;

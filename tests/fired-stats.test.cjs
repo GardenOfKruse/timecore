@@ -50,5 +50,10 @@ const { createFiredStats } = globalThis.TimeCoreDomain;
   // 空状态
   ok(createFiredStats().summary('2026-09-25').today === null);
 
+  // CSV 导出（v1.23.0）
+  const fcsv = s1.serializeCsv().split('\r\n');
+  ok(fcsv[0] === 'date,count' && fcsv[1] === '2026-09-25,106');
+  ok(createFiredStats().serializeCsv() === 'date,count');
+
   console.log(`fired-stats contract: ${n} assertions passed`);
 })();

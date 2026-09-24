@@ -66,7 +66,16 @@ namespace TimeCoreDomain {
       return JSON.stringify({ v: 1, days, total });
     }
 
-    return { load, record, summary, serialize };
+    // 到点统计导出 CSV（v1.23.0）：按日期升序
+    function serializeCsv(): string {
+      const lines = ['date,count'];
+      for (const k of Object.keys(days).sort()) {
+        lines.push(k + ',' + days[k].count);
+      }
+      return lines.join('\r\n');
+    }
+
+    return { load, record, summary, serialize, serializeCsv };
   }
 }
 (globalThis as typeof globalThis & { TimeCoreDomain: typeof TimeCoreDomain }).TimeCoreDomain = TimeCoreDomain;

@@ -171,6 +171,15 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// T: 统计 CSV 导出——域模块生成、渲染端可取
+const csvOk = JSON.parse(await js(`(async () => {
+  TC.Beats.hit(TC.time.epoch(), -20);
+  const csv = TC.Beats.exportCsv();
+  const lines = csv.split('\\r\\n');
+  return JSON.stringify({ head: lines[0] === 'date,count,max_combo,perfect,great,good,miss,accuracy_percent', rows: lines.length >= 2, hitOk: !!lines[1] });
+})()`));
+check('统计 CSV 导出：表头/行结构正确', csvOk.head === true && csvOk.rows === true && csvOk.hitOk === true, csvOk);
+
 // S: 时区晨昏标记——下拉选项前缀与测试端同公式一致
 require('../js/generated/daypart-theme.js');
 const tzOpt = JSON.parse(await js(`(async () => {
