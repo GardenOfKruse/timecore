@@ -40,6 +40,7 @@ const MODULES = [
   ['js/generated/clock-view.js', ['src/adapters/browser/clock-view.ts']],
   ['js/generated/clock-model.js', ['src/domain/clock/clock-model.ts']],
   ['js/generated/countdown-engine.js', ['src/domain/countdown/countdown-engine.ts']],
+  ['js/generated/fired-stats.js', ['src/domain/countdown/fired-stats.ts']],
   ['js/generated/day-progress-model.js', ['src/domain/scene/day-progress-model.ts']],
   ['js/generated/year-progress.js', ['src/domain/scene/year-progress.ts']],
   ['js/generated/daypart-theme.js', ['src/domain/audio/daypart-theme.ts']],

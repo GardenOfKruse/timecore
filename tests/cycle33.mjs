@@ -179,6 +179,14 @@ const daysNow = ((yNow.y % 4 === 0 && yNow.y % 100 !== 0) || yNow.y % 400 === 0)
 const expYFrac = (doyNow - 1 + yNow.dayFrac) / daysNow;
 check('年度进度环：实时 frac 与期望一致', Math.abs(yNow.yearFrac - expYFrac) < 0.001, { got: yNow.yearFrac, exp: Math.round(expYFrac * 100000) / 100000, doy: doyNow });
 
+// N: 每日到点统计——真实到点后抽屉计数 +1
+const fs0 = await js(`document.getElementById('cd-stats').textContent`);
+await js(`TC.Countdown.startSingle(TC.time.epoch() + 4000)`);
+const firedOk = await waitJs(`document.getElementById('cd-stats').textContent !== ${JSON.stringify(fs0)}`, 12000);
+await js(`TC.Countdown.stop()`);
+const fs1 = await js(`document.getElementById('cd-stats').textContent`);
+check('每日到点统计：真实到点后计数变化', firedOk === true && /今日到点 \d+/.test(fs1), { before: fs0, after: fs1 });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

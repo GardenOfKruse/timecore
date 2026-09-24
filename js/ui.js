@@ -8,6 +8,19 @@
   const el = {};
   let windowController = null;
   let toastTimer = 0, vignetteTimer = 0;
+  const firedStats = TimeCoreDomain.createFiredStats();   // 每日到点统计（v1.14.0）
+  let firedSaveTimer = 0;
+  try { firedStats.load(JSON.parse(localStorage.getItem('tc.cdstats.v1') || 'null')); } catch (_) {}
+  function renderFiredStats() {
+    const box = document.getElementById('cd-stats');
+    if (!box) return;
+    const d = new Date();
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const sum = firedStats.summary(key);
+    box.textContent = '今日到点 ' + (sum.today ? sum.today.count : 0) + ' · 累计 ' + sum.total;
+    const keys = Object.keys(sum.days).sort().slice(-7);
+    box.title = '每日到点统计（本地保存 30 天）\n近 7 日：' + keys.map(k => k.slice(5) + ' ' + sum.days[k].count + ' 次').join('，');
+  }
 
   function toast(msg, ms) {
     el.toast.textContent = msg;
@@ -399,6 +412,15 @@
     TC.bus.on('beat:judge', showJudge);
     TC.bus.on('beat:none', () => toast('无活动节拍 · 开启倒计时或按 B 启动节拍器'));
     TC.bus.on('cd:zero', showZero);
+    TC.bus.on('cd:zero', () => {
+      // 每日到点统计（v1.14.0）：计数 + 防抖持久化 + 抽屉行刷新；累计每满 100 补一颗流星
+      const key = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+      const r = firedStats.record(key);
+      clearTimeout(firedSaveTimer);
+      firedSaveTimer = setTimeout(() => { try { localStorage.setItem('tc.cdstats.v1', firedStats.serialize()); } catch (_) {} }, 800);
+      renderFiredStats();
+      if (r.milestone) TC.Scene.meteor();
+    });
     TC.bus.on('cd:advance', d => toast('第 ' + d.cycleIndex + ' 轮 · ' + fmtTrigger(TC.Countdown.info().target)));
     TC.bus.on('cd:done', () => toast('全部周期完成 ✓'));
     TC.bus.on('cd:start', i => toast(fmtTrigger(i.target) + (i.aligned ? '（每' + fmtPeriod(i.periodMs) + '）' : '')));
