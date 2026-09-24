@@ -747,6 +747,7 @@
     updateDayRing(ctx.epoch);   // 一日进度环随本地时间填充
     updateYearRing(ctx.epoch);  // 年度进度环随日环同速流动
     updateHourPulse(ctx.epoch);   // 整点深呼吸（布防时让位）
+    if (document.body.classList.contains('idle')) cameraMotion.drag(dt * 5.5, 0);   // 闲置时相机极缓自转（~0.05 rad/s）
     if (starMat) {
       starMat.uniforms.uTime.value = t;
       starMat.uniforms.uBoost.value += (1 - starMat.uniforms.uBoost.value) * (1 - Math.exp(-dt * 1.8));   // 增亮后缓慢回落

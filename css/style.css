@@ -602,3 +602,26 @@ body.mini #combo-num { font-size: 16px; }
 body.mini .ctrl-panel { padding: 4px; gap: 3px; }
 body.mini .ctrl-panel button { width: 22px; height: 22px; font-size: 10px; }
 body.mini #btn-adb { padding: 0 4px; }
+
+/* 闲置自流动（v1.16.0）：无输入 10 分钟后界面退场，时间本身留在台上；任意输入 2s 淡回 */
+body.idle .panel,
+body.idle #titlebar .tb-btns,
+body.idle #vignette {
+  opacity: 0;
+  transition: opacity 2.2s ease;
+  pointer-events: none;
+}
+body.idle .clock-panel {
+  opacity: 1;
+  pointer-events: auto;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+body.idle .clock-panel .row-sub {
+  opacity: 0;
+}
+body.idle .clock-panel {
+  transition: opacity 2.2s ease, background 2.2s ease;
+}

@@ -8,6 +8,26 @@
   const el = {};
   let windowController = null;
   let toastTimer = 0, vignetteTimer = 0;
+
+  // 闲置自流动（v1.16.0）：600s 无输入 → body.idle 界面退场；布防等触发期间不生效，任意输入即恢复。
+  // 状态机在 IIFE 顶层（TC.UI.forceIdle/idleState 出口与 bindControls 的监听注册共用）。
+  const IDLE_MS = 600000;
+  let idleTimer = 0;
+  let idleOn = false;
+  function setIdle(on) {
+    if (on === idleOn) return;
+    if (on) {
+      const cd = TC.Countdown.info();
+      if (cd.armed && !cd.fired) return;   // 正在等触发不算闲置
+    }
+    idleOn = on;
+    document.body.classList.toggle('idle', on);
+  }
+  function pokeIdle() {
+    setIdle(false);
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => setIdle(true), IDLE_MS);
+  }
   const firedStats = TimeCoreDomain.createFiredStats();   // 每日到点统计（v1.14.0）
   let firedSaveTimer = 0;
   try { firedStats.load(JSON.parse(localStorage.getItem('tc.cdstats.v1') || 'null')); } catch (_) {}
@@ -427,6 +447,10 @@
     TC.bus.on('freerun', on => el.freerun.classList.toggle('active', on));
     TC.bus.on('mute', m => el.mute.classList.toggle('active', m));
     TC.bus.on('sync', renderSync);
+    // 闲置自流动：输入监听在顶层状态机上注册（见文件头部 idleState 块）
+    ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(ev => window.addEventListener(ev, pokeIdle, { passive: true }));
+    pokeIdle();
+    setInterval(() => { if (idleOn) { const cd = TC.Countdown.info(); if (cd.armed && !cd.fired) setIdle(false); } }, 2000);
     TC.bus.on('tz', () => { el.tz.value = TC.Clock.tz; });
 
     // 倒计时状态事件 → 开始/停止按钮
@@ -562,6 +586,9 @@
       renderSync();
       TC.bus.emit('boot');
     },
-    renderCd, renderSync, toast
+    renderCd, renderSync, toast,
+    // 闲置自流动（v1.16.0）测试钩子：强制翻转 + 状态探针（真实 600s 边界等不起）
+    forceIdle(on) { if (on) { clearTimeout(idleTimer); setIdle(true); } else pokeIdle(); },
+    idleState() { return idleOn; }
   };
 })();

@@ -171,6 +171,29 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// P: 闲置自流动——强制进入：类翻转+相机缓漂+退出恢复；布防中拒绝
+const idleT = JSON.parse(await js(`(async () => {
+  const mid = TC.Scene.debugView().targetYaw;
+  TC.UI.forceIdle(true);
+  await new Promise(r2 => setTimeout(r2, 300));
+  const cls = document.body.classList.contains('idle');
+  await new Promise(r2 => setTimeout(r2, 1200));
+  const after = TC.Scene.debugView().targetYaw;
+  TC.UI.forceIdle(false);
+  await new Promise(r2 => setTimeout(r2, 300));
+  return JSON.stringify({ cls, drift: Math.abs(after - mid), restored: document.body.classList.contains('idle'), st: TC.UI.idleState() });
+})()`));
+check('闲置自流动：进入淡出+相机缓漂+退出恢复', idleT.cls === true && idleT.drift > 0.01 && idleT.restored === false && idleT.st === false, idleT);
+const idleB = await js(`(async () => {
+  TC.Countdown.startSingle(TC.time.epoch() + 60000);
+  await new Promise(r2 => setTimeout(r2, 300));
+  TC.UI.forceIdle(true);
+  const cls = document.body.classList.contains('idle');
+  TC.Countdown.stop();
+  return cls;
+})()`);
+check('闲置自流动：布防期间不生效', idleB === false, { idleB });
+
 // O: 太阳赤纬——夏至高度 > 冬至高度、区间钳制（?dayofyear= 覆盖）
 await reloadWith('sunhour=12// M: 年度进度环dayofyear=172');
 const sSummer = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
