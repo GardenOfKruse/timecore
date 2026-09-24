@@ -188,6 +188,11 @@
     el.vol.addEventListener('input', () => TC.Audio.setVolume(parseInt(el.vol.value, 10) / 100));
     el.tick.value = TC.Audio.tickOn ? '1' : '0';
     el.tick.addEventListener('change', () => TC.Audio.setTick(el.tick.value === '1'));
+    const pkSel = document.getElementById('set-pack');
+    if (pkSel) {
+      pkSel.value = TC.Audio.packKey;
+      pkSel.addEventListener('change', () => { TC.Audio.setPack(pkSel.value); toast('音效主题：' + TC.Audio.debugSoundPack().label); });
+    }
     el.softlead.value = TC.Audio.softLead;
     el.softlead.addEventListener('input', () => TC.Audio.setSoftLead(el.softlead.value));
     const mf = document.getElementById('set-metrofull');

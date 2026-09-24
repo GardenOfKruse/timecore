@@ -11,6 +11,7 @@
   let muted = localStorage.getItem('tc.mute') === '1';
   let tickOn = localStorage.getItem('tc.tick') !== '0';   // 软节拍提示（起始秒可设）
   let softLead = clampNum(parseInt(localStorage.getItem('tc.softlead'), 10), 3, 60, 10);   // 距节点多少秒开始软节拍
+  let pack = TimeCoreDomain.soundPack(localStorage.getItem('tc.sndpack'));   // 音效主题包（v1.12.0）
 
   function clampNum(v, a, b, d) { return isFinite(v) ? Math.min(b, Math.max(a, v)) : d; }
 
@@ -75,11 +76,15 @@
   }
 
   const S = {
-    tick(t) { osc('square', 1900, 1400, t, 0.03, 0.10, 'beat'); },   // 走提示音轨：受「提示音量」滑杆控制
+    tick(t) {   // 走提示音轨：受「提示音量」滑杆控制；音色随主题包
+      const k = pack.tick;
+      osc(k.wave, 1900 * k.bright, 1400 * k.bright, t, 0.03 * k.decay, 0.10 * k.peak, 'beat');
+    },
     beep(k, t) {   // 3/2/1 递升
-      const f = { 3: 880, 2: 988, 1: 1175 }[k] || 880;
-      osc('triangle', f, f, t, 0.10, 0.30, 'beat');
-      osc('sine', f * 2, f * 2, t, 0.07, 0.10, 'beat');
+      const b = pack.beep;
+      const f = ({ 3: 880, 2: 988, 1: 1175 }[k] || 880) * b.bright;
+      osc(b.wave, f, f, t, 0.10 * b.decay, 0.30 * b.peak, 'beat');
+      osc('sine', f * 2, f * 2, t, 0.07 * b.decay, 0.10 * b.peak, 'beat');
     },
     fire(t, nodeEpoch) {
       // 到点音景（signature moment）三层：
@@ -89,14 +94,15 @@
       noise(t, 0.5, 0.20, 180, 0.8, 'cue');
       noise(t, 0.9, 0.20, 4200, 0.5, 'cue');   // 高频空气感，拉出空间
       // ② 昼夜四态五声琶音（晨 C 大 / 昼 G 大 / 暮 E 小 / 夜 D 小，按节点时刻自动换色），
-      //    逐音上扬，左右声像交替展开 + 镜像泛音 + 反声像幽灵回声
+      //    音色随主题包（bright 不作用于音阶——保持音程关系）；逐音上扬，左右声像交替展开 + 镜像泛音 + 反声像幽灵回声
       const theme = TimeCoreDomain.daypartTheme(fireHour(nodeEpoch));
+      const fr = pack.fire;
       theme.freqs.forEach((f, i) => {
         const tt = t + 0.03 + i * 0.055;
         const pan = (i % 2 ? 1 : -1) * Math.min(0.7, 0.25 + i * 0.06);
-        osc('triangle', f, f, tt, 0.8 - i * 0.04, 0.16 - i * 0.008, 'cue', pan);
-        osc('sine', f * 2, f * 2, tt + 0.01, 0.4, 0.05, 'cue');
-        osc('triangle', f, f, tt + 0.19, 0.5, 0.05, 'cue', -pan);
+        osc(fr.wave, f, f, tt, (0.8 - i * 0.04) * fr.decay, (0.16 - i * 0.008) * fr.peak, 'cue', pan);
+        osc('sine', f * 2, f * 2, tt + 0.01, 0.4, 0.05 * fr.peak, 'cue');
+        osc(fr.wave, f, f, tt + 0.19, 0.5 * fr.decay, 0.05 * fr.peak, 'cue', -pan);
       });
       // ③ 高频钟簇慢衰减：闪光之后的余韵
       [2637, 3136, 3520].forEach((f, i) => osc('sine', f, f * 0.995, t + 0.25 + i * 0.09, 1.8, 0.045, 'cue'));
@@ -106,10 +112,11 @@
     judge(label) {
       if (!ready()) return;
       const t = audioOutput.currentTime();
-      if (label === 'PERFECT') { osc('sine', 1568, 1568, t, 0.10, 0.24, 'hit'); osc('sine', 2093, 2093, t + 0.03, 0.16, 0.20, 'hit'); }
-      else if (label === 'GREAT') osc('sine', 1046, 1046, t, 0.12, 0.20, 'hit');
-      else if (label === 'GOOD') osc('sine', 784, 784, t, 0.12, 0.16, 'hit');
-      else { osc('sawtooth', 130, 60, t, 0.22, 0.22, 'hit'); noise(t, 0.18, 0.14, 240, 1, 'hit'); }
+      const h = pack.hit, m = pack.miss;
+      if (label === 'PERFECT') { osc(h.wave, 1568 * h.bright, 1568 * h.bright, t, 0.10 * h.decay, 0.24 * h.peak, 'hit'); osc('sine', 2093, 2093, t + 0.03, 0.16 * h.decay, 0.20 * h.peak, 'hit'); }
+      else if (label === 'GREAT') osc(h.wave, 1046 * h.bright, 1046 * h.bright, t, 0.12 * h.decay, 0.20 * h.peak, 'hit');
+      else if (label === 'GOOD') osc(h.wave, 784 * h.bright, 784 * h.bright, t, 0.12 * h.decay, 0.16 * h.peak, 'hit');
+      else { osc(m.wave, 130, 60 * m.bright, t, 0.22 * m.decay, 0.22 * m.peak, 'hit'); noise(t, 0.18 * m.decay, 0.14 * m.peak, 240, 1, 'hit'); }
     },
     combo(n) {
       if (!ready()) return;
@@ -204,6 +211,10 @@
     setVolume(v) { vol = clampNum(v, 0, 1, 0.8); localStorage.setItem('tc.vol', String(vol)); if (!muted) audioOutput.setMasterGain(vol * 0.9); },
     setTick(on) { tickOn = !!on; localStorage.setItem('tc.tick', on ? '1' : '0'); },
     setSoftLead(v) { softLead = clampNum(parseInt(v, 10), 3, 60, 10); localStorage.setItem('tc.softlead', String(softLead)); },
+    // 音效主题包：未知 key 落回默认包；立即生效（下一条调度音即用新音色）
+    setPack(key) { pack = TimeCoreDomain.soundPack(key); localStorage.setItem('tc.sndpack', pack.key); },
+    get packKey() { return pack.key; },
+    debugSoundPack() { return JSON.parse(JSON.stringify(pack)); },
     track(cat) { return audioOutput.trackGain(cat); },
     setTrack(cat, v) { const value = Math.min(1, Math.max(0, v)); audioOutput.setTrackGain(cat, value); if (audioOutput.state() !== 'none') { let tv = {}; try { tv = JSON.parse(localStorage.getItem('tc.track') || '{}'); } catch (_) {} tv[cat] = audioOutput.trackGain(cat); localStorage.setItem('tc.track', JSON.stringify(tv)); } }
   };

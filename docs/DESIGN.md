@@ -44,6 +44,7 @@
 - **可撤销队列**：所有 osc/noise 登记 {src,t0,cat}；cd:stop/cd:advance → cancelPending() 撤销未响的 beat/cue（修停止后残留音）。
 - **零点双响防护**：排 k=0 时必须登记 `fire:<target>` key，cd:zero 兜底以它判重。
 - 分轨音量：beat/cue/hit 独立推子（tc.track）；主音量、静音（tc.vol/tc.mute）。
+- **音效主题包（v1.12.0）**：设置抽屉「音效主题」四选——硅晶（默认=经典音色）/钟琴/木质/芯片（tc.sndpack）；timbre 四参数（波形/亮度/时长/音量倍率）作用于 tick/beep/击拍/MISS/到点琶音音色；到点音阶仍由昼夜主题决定（bright 不改音程）。
 
 ### 2.5 窗口形态（四档，同一窗口）
 | 形态 | 尺寸 | 入口 |

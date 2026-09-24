@@ -159,6 +159,18 @@ await reloadWith('sunhour=0&moonage=0.5');
 const nightNew = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
 check('月相调制夜光：满月夜 > 新月夜（0.5 倍以上差距）', nightFull.moon > nightNew.moon * 2, { full: nightFull.moon, new: nightNew.moon });
 
+// L: 音效主题包——切换生效 + 持久化 + 默认恒等
+const pk0 = await js(`TC.Audio.packKey`);
+const pkSwitch = JSON.parse(await js(`(async () => {
+  TC.Audio.setPack('pixel');
+  const after = { key: TC.Audio.packKey, tickWave: TC.Audio.debugSoundPack().tick.wave, saved: localStorage.getItem('tc.sndpack') };
+  TC.Audio.setPack('classic');
+  const back = TC.Audio.packKey;
+  const ident = TC.Audio.debugSoundPack().tick;
+  return JSON.stringify({ after, back, ident });
+})()`));
+check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);
