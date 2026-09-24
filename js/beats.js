@@ -22,7 +22,8 @@
     if (!sum.today) { box.textContent = '今日击拍 0 · 连击 0 · 准确率 —%'; box.title = '每日击拍统计（本地保存 30 天）'; return; }
     box.textContent = '今日击拍 ' + sum.today.count + ' · 最高连击 ' + sum.today.maxCombo + ' · 准确率 ' + sum.today.accuracy + '%';
     const keys = Object.keys(sum.days).sort().slice(-7);
-    box.title = '每日击拍统计（本地保存 30 天）\n近 7 日：' + keys.map(k => k.slice(5) + ' ' + sum.days[k].count + ' 发').join('，');
+    const best = sum.bestHour != null ? '\n黄金时段 ' + sum.bestHour + ':00（近 30 天击拍最多）' : '';
+    box.title = '每日击拍统计（本地保存 30 天）\n近 7 日：' + keys.map(k => k.slice(5) + ' ' + sum.days[k].count + ' 发').join('，') + best;
   }
 
   // 当前可用节拍网格：倒计时优先，其次自由节拍器（对齐整秒绝对节点）
@@ -40,7 +41,7 @@
     if (!g) { TC.bus.emit('beat:none'); return null; }
     const rec = beatJudge.judge({ at: e, nodeEpoch: g.node, mode: g.mode, forcedDeviation: forcedDev });
     TC.bus.emit('beat:judge', rec);
-    beatStats.record(dateKey(e), rec);   // 每日击拍统计（本地 30 天）
+    beatStats.record(dateKey(e), { label: rec.label, combo: rec.combo, hour: new Date(e).getHours() });   // 每日击拍统计 + 小时分布（本地 30 天）
     scheduleStatsSave();
     renderStats();
     return rec;

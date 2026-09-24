@@ -61,7 +61,23 @@ const { createBeatStats } = globalThis.TimeCoreDomain;
   const snap = s6.summary('2026-09-19');
   snap.today.count = 999;
   snap.days['2026-09-19'].count = 999;
-  ok(s6.summary('2026-09-19').today.count === 1);
+  snap.days['2026-09-19'].hours[3] = 999;
+  ok(s6.summary('2026-09-19').today.count === 1 && s6.summary('2026-09-19').today.hours[3] === 0);
+
+  // 小时分布（v1.17.0）：入桶、跨日聚合、非法小时忽略、旧数据向后兼容
+  const s7 = createBeatStats();
+  s7.record('2026-09-19', { label: 'PERFECT', combo: 1, hour: 21 });
+  s7.record('2026-09-19', { label: 'GREAT', combo: 1, hour: 21 });
+  s7.record('2026-09-19', { label: 'GOOD', combo: 1, hour: 9 });
+  s7.record('2026-09-18', { label: 'PERFECT', combo: 1, hour: 21 });
+  ok(s7.summary('2026-09-19').today.hours[21] === 2 && s7.summary('2026-09-19').today.hours[9] === 1);
+  ok(s7.summary('2026-09-19').bestHour === 21);
+  s7.record('2026-09-19', { label: 'PERFECT', combo: 1, hour: 25 });   // 非法小时忽略
+  ok(s7.summary('2026-09-19').today.hours[21] === 2 && s7.summary('2026-09-19').today.hours[1] === 0);
+  const s8 = createBeatStats();
+  s8.load({ days: { '2026-09-19': { count: 5 } } });   // 旧版无 hours 字段
+  ok(s8.summary('2026-09-19').today.count === 5 && s8.summary('2026-09-19').bestHour === null);
+  ok(s8.summary('2026-09-19').today.hours.length === 24 && s8.summary('2026-09-19').today.hours.every(h => h === 0));
 
   console.log(`beat-stats contract: ${n} assertions passed`);
 })();
