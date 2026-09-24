@@ -47,8 +47,13 @@
     const h = sunHour(tz, e);
     const az = ((h - 12) / 24) * Math.PI * 2;      // 12:00 → 0（正面）
     scene.userData.sunAz = az;
+    // 真实太阳赤纬（v1.15.0）：key 光高度随季节 ±0.5 摆动（小振幅控制回归面；?dayofyear=N 测试覆盖）
+    const doyMatch = /dayofyear=(\d+)/.exec(location.search);
+    const doy = doyMatch ? +doyMatch[1] : (() => { const p = localDateParts(tz, e); return TimeCoreDomain.dayOfYear(p.y, p.m, p.d); })();
+    const decl = TimeCoreDomain.solarDeclination(doy);
+    scene.userData.declDeg = decl;
     const R = 6.2;
-    scene.userData.keyLight.position.set(Math.sin(az) * R, 2.6, Math.cos(az) * R);
+    scene.userData.keyLight.position.set(Math.sin(az) * R, 2.6 + (decl / 23.44) * 0.5, Math.cos(az) * R);
     if (moonLight) moonLight.position.set(-Math.sin(az) * R, -1.6, -Math.cos(az) * R);
     const facing = Math.cos(az);                    // 1 正午 → -1 午夜
     const day = Math.min(1, Math.max(0.1, (facing + 0.25) / 1.25));
@@ -883,6 +888,7 @@
         trails: sats.filter(s => s.trail && s.trail.visible).length,
         dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null,
         yearFrac: scene.userData.yearFrac != null ? Math.round(scene.userData.yearFrac * 100000) / 100000 : null,
+        declDeg: scene.userData.declDeg != null ? Math.round(scene.userData.declDeg * 100) / 100 : null,
         hourPulses: hourPulseCount,
         keyColor: k.color.getHexString()
       } : null;

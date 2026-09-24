@@ -171,6 +171,13 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// O: 太阳赤纬——夏至高度 > 冬至高度、区间钳制（?dayofyear= 覆盖）
+await reloadWith('sunhour=12// M: 年度进度环dayofyear=172');
+const sSummer = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+await reloadWith('sunhour=12// M: 年度进度环dayofyear=355');
+const sWinter = JSON.parse(await js(`JSON.stringify(TC.Scene.debugSun())`));
+check('太阳赤纬：夏至高 > 冬至低 + 区间钳制', sSummer.declDeg > 22 && sWinter.declDeg < -22 && sSummer.pos[1] > sWinter.pos[1], { summer: sSummer.declDeg, winter: sWinter.declDeg });
+
 // M: 年度进度环——实时 frac 与测试端同公式一致（(doy-1+dayFrac)/365|366，闰年感知）
 const yNow = JSON.parse(await js(`JSON.stringify({ yearFrac: TC.Scene.debugSun().yearFrac, dayFrac: TC.Scene.debugSun().dayFrac, ...(() => { const f = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }); const p = {}; for (const it of f.formatToParts(new Date())) p[it.type] = it.value; return { y: +p.year, m: +p.month, d: +p.day }; })() })`));
 const CUM = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
