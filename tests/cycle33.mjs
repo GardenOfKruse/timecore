@@ -171,6 +171,21 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// Q: 远期目标日定时——选定日期的绝对时刻
+const farT = JSON.parse(await js(`(async () => {
+  const d = new Date(Date.now() + 7 * 86400000);
+  const iso = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  document.getElementById('cd-abs-date').value = iso;
+  document.getElementById('cd-abs-time').value = '12:00:00';
+  document.getElementById('cd-abs-go').click();
+  await new Promise(r2 => setTimeout(r2, 400));
+  const info = TC.Countdown.info();
+  TC.Countdown.stop();
+  const expect = new Date(iso + 'T12:00:00').getTime();
+  return JSON.stringify({ armed: info.armed, target: info.target, expect });
+})()`));
+check('远期目标日定时：一周后 12:00 精确布防', farT.armed === true && Math.abs(farT.target - farT.expect) < 1500, farT);
+
 // P: 闲置自流动——强制进入：类翻转+相机缓漂+退出恢复；布防中拒绝
 const idleT = JSON.parse(await js(`(async () => {
   const mid = TC.Scene.debugView().targetYaw;

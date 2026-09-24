@@ -181,8 +181,17 @@
       if (!v) { toast('请先选择时刻'); return; }
       const p = v.split(':').map(x => parseInt(x, 10) || 0);
       const t = new Date();
-      t.setHours(p[0], p[1] || 0, p[2] || 0, 0);
-      if (t.getTime() <= TC.time.epoch()) t.setDate(t.getDate() + 1);
+      // 可选目标日（v1.18.0）：留空保持「今天(或明天)的该时刻」原语义；选了日期即定时到那天
+      const dayV = document.getElementById('cd-abs-date') ? document.getElementById('cd-abs-date').value : '';
+      if (dayV) {
+        const dp = dayV.split('-').map(x => parseInt(x, 10));
+        t.setFullYear(dp[0], (dp[1] || 1) - 1, dp[2] || 1);
+        t.setHours(p[0], p[1] || 0, p[2] || 0, 0);
+        if (t.getTime() <= TC.time.epoch()) { toast('目标时刻已过去——选个未来的时间'); return; }
+      } else {
+        t.setHours(p[0], p[1] || 0, p[2] || 0, 0);
+        if (t.getTime() <= TC.time.epoch()) t.setDate(t.getDate() + 1);
+      }
       TC.Countdown.startSingle(t.getTime());
       el.absGo.blur();
     });
