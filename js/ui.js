@@ -143,14 +143,35 @@
   }
 
   /* ---------- 绑定 ---------- */
+  // 时区晨昏标记（v1.21.0）：下拉里每个时区标注当地此刻的晨◐/昼☀/暮☾/夜✦，切时区前先知道天亮没亮
+  const TZ_GLYPH = { morning: '◐', day: '☀', evening: '☾', night: '✦' };
+  const tzHourFmtCache = new Map();
+  function tzGlyph(z) {
+    try {
+      let fmt = tzHourFmtCache.get(z);
+      if (!fmt) {
+        fmt = new Intl.DateTimeFormat('en-GB', { timeZone: z === 'local' ? undefined : z, hour: '2-digit', minute: '2-digit', hour12: false });
+        tzHourFmtCache.set(z, fmt);
+      }
+      const p = {};
+      for (const it of fmt.formatToParts(new Date())) p[it.type] = it.value;
+      return TZ_GLYPH[TimeCoreDomain.daypartFor((+p.hour) + (+p.minute) / 60)];
+    } catch (_) { return '·'; }
+  }
+  function tzBaseName(z) { return z === 'local' ? '本地时区' : z; }
+  function refreshTzOptions() {
+    for (const o of el.tz.options) o.textContent = tzGlyph(o.value) + ' ' + tzBaseName(o.value);
+  }
   function bindControls() {
     // 时区
     for (const z of ZONES) {
       const o = document.createElement('option');
       o.value = z;
-      o.textContent = z === 'local' ? '本地时区' : z;
+      o.textContent = tzBaseName(z);
       el.tz.appendChild(o);
     }
+    refreshTzOptions();
+    setInterval(refreshTzOptions, 60000);
     el.tz.value = TC.Clock.tz;
     el.tz.addEventListener('change', () => { TC.Clock.setTz(el.tz.value); toast('时区 → ' + (el.tz.value === 'local' ? '本地' : el.tz.value)); });
 

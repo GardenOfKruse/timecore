@@ -171,6 +171,18 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// S: 时区晨昏标记——下拉选项前缀与测试端同公式一致
+require('../js/generated/daypart-theme.js');
+const tzOpt = JSON.parse(await js(`(async () => {
+  const opts = [...document.getElementById('tz-select').options];
+  const tokyo = opts.find(x => x.value === 'Asia/Tokyo');
+  return JSON.stringify({ all: opts.every(x => /^[◐☀☾✦] /.test(x.textContent)), tokyo: tokyo.textContent });
+})()`));
+const DP = { morning: '◐', day: '☀', evening: '☾', night: '✦' };
+const jpH = JSON.parse(await js(`JSON.stringify({ h: (() => { const p = {}; for (const it of new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date())) p[it.type] = it.value; return (+p.hour) + (+p.minute) / 60; })() })`)).h;
+const expGlyph = DP[globalThis.TimeCoreDomain.daypartFor(jpH)];
+check('时区晨昏标记：全部选项带前缀 + 东京与期望一致', tzOpt.all === true && tzOpt.tokyo.startsWith(expGlyph + ' '), { tokyo: tzOpt.tokyo, expGlyph });
+
 // R: 选点截图存档——真实 IPC 磁盘往返
 const shotRT = JSON.parse(await js(`(async () => {
   const b64 = btoa('CYCLE33-SHOT-ARCHIVE-ROUNDTRIP'.repeat(12));
