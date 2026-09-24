@@ -171,6 +171,14 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// M: 年度进度环——实时 frac 与测试端同公式一致（(doy-1+dayFrac)/365|366，闰年感知）
+const yNow = JSON.parse(await js(`JSON.stringify({ yearFrac: TC.Scene.debugSun().yearFrac, dayFrac: TC.Scene.debugSun().dayFrac, ...(() => { const f = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }); const p = {}; for (const it of f.formatToParts(new Date())) p[it.type] = it.value; return { y: +p.year, m: +p.month, d: +p.day }; })() })`));
+const CUM = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+const doyNow = CUM[yNow.m - 1] + yNow.d + ((yNow.m > 2 && ((yNow.y % 4 === 0 && yNow.y % 100 !== 0) || yNow.y % 400 === 0)) ? 1 : 0);
+const daysNow = ((yNow.y % 4 === 0 && yNow.y % 100 !== 0) || yNow.y % 400 === 0) ? 366 : 365;
+const expYFrac = (doyNow - 1 + yNow.dayFrac) / daysNow;
+check('年度进度环：实时 frac 与期望一致', Math.abs(yNow.yearFrac - expYFrac) < 0.001, { got: yNow.yearFrac, exp: Math.round(expYFrac * 100000) / 100000, doy: doyNow });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

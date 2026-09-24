@@ -41,6 +41,7 @@ const MODULES = [
   ['js/generated/clock-model.js', ['src/domain/clock/clock-model.ts']],
   ['js/generated/countdown-engine.js', ['src/domain/countdown/countdown-engine.ts']],
   ['js/generated/day-progress-model.js', ['src/domain/scene/day-progress-model.ts']],
+  ['js/generated/year-progress.js', ['src/domain/scene/year-progress.ts']],
   ['js/generated/daypart-theme.js', ['src/domain/audio/daypart-theme.ts']],
   ['js/generated/sound-pack.js', ['src/domain/audio/sound-pack.ts']],
   ['js/generated/electron-bridge.js', ['src/adapters/electron/electron-bridge.ts']],

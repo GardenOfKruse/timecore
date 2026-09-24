@@ -107,6 +107,39 @@
     dayRing.geometry = new THREE.RingGeometry(4.75, 4.85, 160, 1, Math.PI / 2 - frac * Math.PI * 2, frac * Math.PI * 2);
   }
 
+  /* ---------- 年度进度环（v1.13.0）：日环之外一圈更淡的年环，闰年感知，随日环同速流动 ---------- */
+  let yearRing = null, yearRingFrac = -1, yearFmtTz = null, yearFmt = null;
+  function localDateParts(tz, e) {
+    try {
+      if (yearFmtTz !== tz) {
+        yearFmtTz = tz;
+        yearFmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz === 'local' ? undefined : tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      }
+      const p = {};
+      for (const it of yearFmt.formatToParts(e)) p[it.type] = it.value;
+      return { y: +p.year, m: +p.month, d: +p.day };
+    } catch (_) { const dt = new Date(e); return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() }; }
+  }
+  function buildYearRing() {
+    yearRing = new THREE.Mesh(
+      new THREE.RingGeometry(5.05, 5.12, 160, 1, Math.PI / 2, 0),
+      new THREE.MeshBasicMaterial({ color: 0x39d7ff, transparent: true, opacity: 0.07, blending: THREE.NormalBlending, side: THREE.DoubleSide, depthWrite: false })
+    );
+    scene.add(yearRing);
+  }
+  function updateYearRing(e) {
+    if (!yearRing) return;
+    const tz = (window.TC && TC.Clock) ? TC.Clock.tz : 'local';
+    const parts = localDateParts(tz, e);
+    const df = scene.userData.dayFrac != null ? scene.userData.dayFrac : 0;
+    const st = TimeCoreDomain.yearProgress(parts.y, TimeCoreDomain.dayOfYear(parts.y, parts.m, parts.d), df);
+    scene.userData.yearFrac = st.frac;
+    if (Math.abs(st.frac - yearRingFrac) < 0.000003) return;   // 年尺度：约 1.6 分钟才需重建一次弧
+    yearRingFrac = st.frac;
+    yearRing.geometry.dispose();
+    yearRing.geometry = new THREE.RingGeometry(5.05, 5.12, 160, 1, Math.PI / 2 - st.frac * Math.PI * 2, st.frac * Math.PI * 2);
+  }
+
   /* ---------- 整点深呼吸（v1.10.0）：绝对节点哲学下沉到小时尺度，纯视觉无声音 ---------- */
   let lastHourEpoch = Date.now();   // 注意：传给 hourCrossed 的是真实 epoch，不是小时桶号
   let hourPulseCount = 0;
@@ -623,7 +656,7 @@
     const rim = new THREE.PointLight(0xff5d8f, 0.35, 30); rim.position.set(-5, -2, -3); scene.add(rim);
 
     buildCore(); buildRings(); buildOrbits(); buildParticles(); buildShafts(); buildShocks();
-    buildStars(); buildMeteor(); buildMoon(); buildDayRing();
+    buildStars(); buildMeteor(); buildMoon(); buildDayRing(); buildYearRing();
     setPhase('IDLE'); cur.color.copy(tgt.color);
     // 能量唤醒：核心从熄灭状态充能到待机（约 1s 缓升，靠主循环 lerp 完成）
     cur.intensity = 0; cur.pSpeed = 0.2;
@@ -707,6 +740,7 @@
     updateSun(ctx.epoch);   // 星球昼夜随真实时间转
     updateMoon(ctx.epoch);  // 月亮按真实朔望周期绕行
     updateDayRing(ctx.epoch);   // 一日进度环随本地时间填充
+    updateYearRing(ctx.epoch);  // 年度进度环随日环同速流动
     updateHourPulse(ctx.epoch);   // 整点深呼吸（布防时让位）
     if (starMat) {
       starMat.uniforms.uTime.value = t;
@@ -848,6 +882,7 @@
         lastFrame: lastFrameInfo,
         trails: sats.filter(s => s.trail && s.trail.visible).length,
         dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null,
+        yearFrac: scene.userData.yearFrac != null ? Math.round(scene.userData.yearFrac * 100000) / 100000 : null,
         hourPulses: hourPulseCount,
         keyColor: k.color.getHexString()
       } : null;
