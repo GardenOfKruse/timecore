@@ -171,6 +171,18 @@ const pkSwitch = JSON.parse(await js(`(async () => {
 })()`));
 check('音效主题包：切换生效+持久化+切回恒等', pk0 === 'classic' && pkSwitch.after.key === 'pixel' && pkSwitch.after.tickWave === 'square' && pkSwitch.after.saved === 'pixel' && pkSwitch.back === 'classic' && pkSwitch.ident.bright === 1 && pkSwitch.ident.decay === 1 && pkSwitch.ident.peak === 1, pkSwitch);
 
+// U: 倒计时数字心跳——秒位变化触发 WAAPI 换位（探针计数增长）
+const tickT = JSON.parse(await js(`(async () => {
+  TC.Countdown.startSingle(TC.time.epoch() + 30000);
+  await new Promise(r2 => setTimeout(r2, 2300));
+  const a = TC.UI.debugCdTick();
+  const text = document.getElementById('cd-remaining').textContent;
+  const anims = document.getElementById('cd-rss').getAnimations().length;
+  TC.Countdown.stop();
+  return JSON.stringify({ ticks: a.ticks, text, anims });
+})()`));
+check('倒计时数字心跳：秒位变化触发换位动效', tickT.ticks >= 2 && /^\d{2}:\d{2}\.\d{3}$/.test(tickT.text) && tickT.anims >= 0, tickT);
+
 // T: 统计 CSV 导出——域模块生成、渲染端可取
 const csvOk = JSON.parse(await js(`(async () => {
   TC.Beats.hit(TC.time.epoch(), -20);

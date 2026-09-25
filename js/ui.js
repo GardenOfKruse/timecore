@@ -100,8 +100,29 @@
     return '触发 ' + TC.Clock.wallClock(target) + '.' + fmtTargetMs(target);
   }
 
+  // 倒计时数字心跳（v1.24.0）：秒/分位变化时对变化段做 WAAPI 上浮淡入（与钟面 d-pair 同语言）；毫秒位照常直刷
+  const CD_TICK_KEYFRAMES = [
+    { transform: 'translateY(0.32em)', opacity: '0.2' },
+    { transform: 'translateY(0)', opacity: '1' }
+  ];
+  let cdLastMain = '';
+  let cdTickN = 0;
+  function setCdPair(node, value, animate) {
+    if (node.textContent === value) return;
+    node.textContent = value;
+    if (animate && node.animate) {
+      node.animate(CD_TICK_KEYFRAMES, { duration: 240, easing: 'ease-out' });
+      cdTickN++;
+    }
+  }
   function renderCd(info) {
-    el.remaining.textContent = info.fired ? '00:00.000' : TC.Countdown.fmtRemaining(info.remainingMs);
+    const text = info.fired ? '00:00.000' : TC.Countdown.fmtRemaining(info.remainingMs);
+    const dot = text.lastIndexOf('.');
+    const main = text.slice(0, dot);
+    setCdPair(el.rmm, main.slice(0, 2), cdLastMain !== '');
+    setCdPair(el.rss, main.slice(3, 5), cdLastMain !== '');
+    el.rms.textContent = text.slice(dot);
+    cdLastMain = main;
     el.phase.textContent = info.phaseLabel;
     el.phase.className = 'chip ph-' + info.phase;
 
@@ -600,7 +621,7 @@
     init() {
       const ids = {
         clockHms: 'clock-hms', clockMs: 'clock-ms', clockDate: 'clock-date', tz: 'tz-select', badge: 'sync-badge',
-        phase: 'cd-phase', cycle: 'cd-cycle', remaining: 'cd-remaining', target: 'cd-target',
+        phase: 'cd-phase', cycle: 'cd-cycle', remaining: 'cd-remaining', rmm: 'cd-rmm', rss: 'cd-rss', rms: 'cd-rms', target: 'cd-target',
         min: 'cd-min', sec: 'cd-sec', cycles: 'cd-cycles', inf: 'cd-inf', start: 'cd-start', stop: 'cd-stop',
         abs: 'cd-abs-time', absGo: 'cd-abs-go', absHour: 'cd-abs-hour', judge: 'judge-pop', combo: 'combo', comboNum: 'combo-num',
         comboAcc: 'combo-acc', comboMax: 'combo-max', zero: 'zero-msg', zeroSub: 'zero-sub',
@@ -630,6 +651,8 @@
       TC.bus.emit('boot');
     },
     renderCd, renderSync, toast,
+    // 倒计时数字心跳探针（v1.24.0）
+    debugCdTick() { return { mm: el.rmm.textContent, ss: el.rss.textContent, ms: el.rms.textContent, ticks: cdTickN }; },
     // 闲置自流动（v1.16.0）测试钩子：强制翻转 + 状态探针（真实 600s 边界等不起）
     forceIdle(on) { if (on) { clearTimeout(idleTimer); setIdle(true); } else pokeIdle(); },
     idleState() { return idleOn; }
