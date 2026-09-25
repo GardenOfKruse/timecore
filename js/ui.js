@@ -318,6 +318,21 @@
       else toast('透明背景在桌面端窗口生效');
     });
 
+    // 开机自启（v1.26.0）：仅桌面端可见；状态从主进程 win:get 真值回读（注册表为准）
+    const loginRow = document.getElementById('row-login');
+    const loginCb = document.getElementById('set-login');
+    if (loginRow && loginCb && window.electronAPI) {
+      loginRow.hidden = false;
+      (async () => {
+        const st = await window.electronAPI.get();
+        loginCb.checked = !!(st && st.login);
+      })();
+      loginCb.addEventListener('change', () => {
+        window.electronAPI.send('set-login', loginCb.checked);
+        toast('开机自动启动已' + (loginCb.checked ? '开启（隐藏启动）' : '关闭'));
+      });
+    }
+
     // Electron：窗口控制统一在标题栏（置顶/最小化/全屏/关闭）
     if (window.electronAPI) {
       windowController = TimeCoreDomain.createWindowController(window.electronAPI);

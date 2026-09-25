@@ -183,6 +183,13 @@ const tickT = JSON.parse(await js(`(async () => {
 })()`));
 check('倒计时数字心跳：秒位变化触发换位动效', tickT.ticks >= 2 && /^\d{2}:\d{2}\.\d{3}$/.test(tickT.text) && tickT.anims >= 0, tickT);
 
+// V: 开机自启链路——win:get 真值回读字段存在（注册表测试不污染：不真开）
+const loginSt = JSON.parse(await js(`(async () => {
+  const st = await electronAPI.get();
+  return JSON.stringify({ hasLoginField: 'login' in st, type: typeof st.login, val: st.login });
+})()`));
+check('开机自启：win:get 真值回读字段存在', loginSt.hasLoginField === true && loginSt.type === 'boolean', loginSt);
+
 // T: 统计 CSV 导出——域模块生成、渲染端可取
 const csvOk = JSON.parse(await js(`(async () => {
   TC.Beats.hit(TC.time.epoch(), -20);

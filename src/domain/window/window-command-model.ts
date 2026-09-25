@@ -17,6 +17,7 @@ export type WindowCommandIntent =
   | { type: 'zoom-clock'; delta: number; buttons: number }
   | { type: 'open'; url: string }
   | { type: 'flash' }
+  | { type: 'set-login'; enable: boolean }
   | { type: 'close' };
 
 export interface WindowCommandModel {
@@ -72,7 +73,8 @@ function route(command: unknown, arg?: unknown): WindowCommandIntent | null {
     case 'open': {      const url = externalUrl(arg);
       return url === null ? null : { type: 'open', url };
     }
-    case 'flash': return { type: 'flash' };   // 到点任务栏闪烁（v1.22.0）：窗口最小化/失焦时吸引注意
+    case 'flash': return { type: 'flash' };
+    case 'set-login': return { type: 'set-login', enable: arg === true };   // 开机自启（v1.26.0）：仅显式 true 开启   // 到点任务栏闪烁（v1.22.0）：窗口最小化/失焦时吸引注意
     case 'close': return { type: 'close' };
     default: return null;
   }

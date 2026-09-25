@@ -46,6 +46,7 @@
 | Y | 时区晨昏标记 | v1.21.0 | 时区下拉每项标注当地此刻晨◐/昼☀/暮☾/夜✦，切时区前先知道天亮没亮 | ✅已发版 |
 | Z2 | 统计 CSV 导出 | v1.23.0 | 击拍/到点统计一键导出 CSV（域模块生成，抽屉下载链接） | ✅已发版 |
 | 心跳 | 倒计时数字心跳 | v1.24.0 | 正常窗口倒计时大数字补上与钟面同语言的秒/分换位动效 | ✅已发版 |
+| 自启 | 开机自启 | v1.26.0 | 设置抽屉开关（隐藏启动），win:get 真值回读；仅桌面端可见 | ✅已发版 |
 | 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
 | Z | 到点任务栏闪烁 | v1.22.0 | 窗口最小化/失焦时到点闪烁任务栏吸引注意，回窗即停 | ✅已发版 |
 
@@ -72,6 +73,11 @@
 - 动机：窗口最小化或被遮挡时，到点只剩声音一条通道——任务栏闪烁是零 UI 成本的视觉双保险。
 - 实现：window-command-model 路由新 flash 意图（契约 +1）；ElectronBridge 白名单放行（契约 +1）；主进程收到 flash 且窗口未聚焦/最小化时 `win.flashFrame(true)`，focus 事件即停；ui.js 在 cd:zero 时发送。
 - 验证：bridge 16 项 + command-model 21 项契约；45 契约 1207 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 自启：开机自启（v1.26.0，2026-09-26 零点，功能）
+- 动机：常驻装置的最后一环——装完即常驻，开机不用手动拉起。
+- 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
+- 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
+- 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
 ### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
 - 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
 - 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。
@@ -90,6 +96,11 @@
 ` 会先被外层模板解析成真实换行再注入页面——页面侧需双重转义（`\r\n`）；sed 的 `
 ` 也会变真实换行，注入类断言一律用 Edit 而非 sed。
 - 验证：cycle33 扩至 24 断言；45 契约 1213 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 自启：开机自启（v1.26.0，2026-09-26 零点，功能）
+- 动机：常驻装置的最后一环——装完即常驻，开机不用手动拉起。
+- 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
+- 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
+- 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
 ### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
 - 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
 - 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。

@@ -26,6 +26,9 @@ assert.deepEqual(model.route('open', 'https://github.com/GardenOfKruse/timecore/
 assert.equal(model.route('open', 'https://example.com'), null);
 assert.equal(model.route('open', 'http://github.com/GardenOfKruse/timecore'), null);
 assert.deepEqual(model.route('flash'), { type: 'flash' });   // v1.22.0 到点任务栏闪烁
+assert.deepEqual(model.route('set-login', true), { type: 'set-login', enable: true });   // v1.26.0 开机自启
+assert.deepEqual(model.route('set-login', false), { type: 'set-login', enable: false });
+assert.deepEqual(model.route('set-login', 'yes'), { type: 'set-login', enable: false });   // 非布尔按 false
 assert.deepEqual(model.route('close'), { type: 'close' });
 assert.equal(model.route('unknown'), null);
 

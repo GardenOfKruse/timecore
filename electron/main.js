@@ -230,6 +230,9 @@ ipcMain.on('win', (ev, cmd, arg) => {
     case 'zoom-clock': zoomClock(intent); break;
     case 'open': shell.openExternal(intent.url); break;
     case 'flash': if (win && (!win.isFocused() || win.isMinimized())) win.flashFrame(true); break;   // 到点任务栏闪烁；聚焦即停
+    case 'set-login':   // 开机自启（v1.26.0）：openAsHidden 让登录后窗口隐藏启动，由 ready-to-show 流程接管
+      try { app.setLoginItemSettings({ openAtLogin: intent.enable === true, openAsHidden: true }); } catch (_) {}
+      break;
     case 'close': win.close(); break;
   }
 });
@@ -238,7 +241,8 @@ ipcMain.handle('win:get', () => ({
   ...windowCommandModel.snapshot({
     top: win ? win.isAlwaysOnTop() : false, fs: fsState, clock: clockMode
   }),
-  ver: app.getVersion()
+  ver: app.getVersion(),
+  login: (() => { try { return app.getLoginItemSettings().openAtLogin; } catch (_) { return false; } })()
 }));
 
 /* ---------- ADB 齐射（仅 Windows 桌面端） ---------- */
