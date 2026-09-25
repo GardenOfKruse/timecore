@@ -46,6 +46,7 @@
 | Y | 时区晨昏标记 | v1.21.0 | 时区下拉每项标注当地此刻晨◐/昼☀/暮☾/夜✦，切时区前先知道天亮没亮 | ✅已发版 |
 | Z2 | 统计 CSV 导出 | v1.23.0 | 击拍/到点统计一键导出 CSV（域模块生成，抽屉下载链接） | ✅已发版 |
 | 心跳 | 倒计时数字心跳 | v1.24.0 | 正常窗口倒计时大数字补上与钟面同语言的秒/分换位动效 | ✅已发版 |
+| 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
 | Z | 到点任务栏闪烁 | v1.22.0 | 窗口最小化/失焦时到点闪烁任务栏吸引注意，回窗即停 | ✅已发版 |
 
 > 合并说明：A-D 四个方向均零操作成本、彼此独立且全部 E2E 绿，合并为一个 v1.3.1 发布，避免连发多版刷屏。
@@ -71,6 +72,11 @@
 - 动机：窗口最小化或被遮挡时，到点只剩声音一条通道——任务栏闪烁是零 UI 成本的视觉双保险。
 - 实现：window-command-model 路由新 flash 意图（契约 +1）；ElectronBridge 白名单放行（契约 +1）；主进程收到 flash 且窗口未聚焦/最小化时 `win.flashFrame(true)`，focus 事件即停；ui.js 在 cd:zero 时发送。
 - 验证：bridge 16 项 + command-model 21 项契约；45 契约 1207 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
+- 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
+- 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。
+- 教训：python 的 /tmp 与 Git Bash /tmp 不互通（块文件交接要用同一解析）；sed 插入会把 `d` 吃成 `d`——正则注入后必须立即 node -e 验证匹配行为。
+- 验证：cycle30/31/33（场景三组）+ 九组 cycle + 45 契约 1213 断言 + 无线真机 e2e 全绿。
 ### 方向 心跳：倒计时数字换位动效（v1.24.0，2026-09-25 深夜）
 - 动机：v1.3.0 给钟面数字做了 d-pair 换位动效，正常窗口的倒计时大数字（MM:SS.mmm）至今裸刷文本——同一装置两套数字语言。
 - 实现：#cd-remaining 内拆 MM/SS/ms 三段（外层 textContent 拼接值不变，cycle 断言兼容）；renderCd 检测秒/分位变化对变化段做 WAAPI 上浮淡入（240ms GPU-only，毫秒流转不触发）；TC.UI.debugCdTick() 探针。
@@ -84,6 +90,11 @@
 ` 会先被外层模板解析成真实换行再注入页面——页面侧需双重转义（`\r\n`）；sed 的 `
 ` 也会变真实换行，注入类断言一律用 Edit 而非 sed。
 - 验证：cycle33 扩至 24 断言；45 契约 1213 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
+- 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
+- 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。
+- 教训：python 的 /tmp 与 Git Bash /tmp 不互通（块文件交接要用同一解析）；sed 插入会把 `d` 吃成 `d`——正则注入后必须立即 node -e 验证匹配行为。
+- 验证：cycle30/31/33（场景三组）+ 九组 cycle + 45 契约 1213 断言 + 无线真机 e2e 全绿。
 ### 方向 心跳：倒计时数字换位动效（v1.24.0，2026-09-25 深夜）
 - 动机：v1.3.0 给钟面数字做了 d-pair 换位动效，正常窗口的倒计时大数字（MM:SS.mmm）至今裸刷文本——同一装置两套数字语言。
 - 实现：#cd-remaining 内拆 MM/SS/ms 三段（外层 textContent 拼接值不变，cycle 断言兼容）；renderCd 检测秒/分位变化对变化段做 WAAPI 上浮淡入（240ms GPU-only，毫秒流转不触发）；TC.UI.debugCdTick() 探针。
