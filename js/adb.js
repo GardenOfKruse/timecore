@@ -353,6 +353,9 @@
       save(); renderChipsAll();
     } else if (event.kind === 'calibrate') {
       void probe(serial);
+    } else if (event.kind === 'reconnect') {   // 一键重连（v1.27.0）：无线走 connect 控制器，USB 走 reconnect offline
+      if (serial.includes(':')) void connect(serial);
+      else void adbExecutor.exec(availabilityState().path, ['reconnect', serial], { timeoutMs: 8000 }).then(r => { log('reconnect ' + serial + ' → ' + ((r.stdout || r.stderr || r.error || '').trim().slice(0, 60) || '完成')); scan(); });
     } else if (event.kind === 'tap') {
       const d = deviceRegistry.get(serial);
       if (!d) return;

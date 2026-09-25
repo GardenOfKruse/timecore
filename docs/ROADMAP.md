@@ -47,6 +47,7 @@
 | Z2 | 统计 CSV 导出 | v1.23.0 | 击拍/到点统计一键导出 CSV（域模块生成，抽屉下载链接） | ✅已发版 |
 | 心跳 | 倒计时数字心跳 | v1.24.0 | 正常窗口倒计时大数字补上与钟面同语言的秒/分换位动效 | ✅已发版 |
 | 自启 | 开机自启 | v1.26.0 | 设置抽屉开关（隐藏启动），win:get 真值回读；仅桌面端可见 | ✅已发版 |
+| 重连 | ADB 离线一键重连 | v1.27.0 | 离线/未授权设备行内「连」按钮：无线走 connect、USB 走 reconnect，在线即消失 | ✅已发版 |
 | 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
 | Z | 到点任务栏闪烁 | v1.22.0 | 窗口最小化/失焦时到点闪烁任务栏吸引注意，回窗即停 | ✅已发版 |
 
@@ -73,6 +74,10 @@
 - 动机：窗口最小化或被遮挡时，到点只剩声音一条通道——任务栏闪烁是零 UI 成本的视觉双保险。
 - 实现：window-command-model 路由新 flash 意图（契约 +1）；ElectronBridge 白名单放行（契约 +1）；主进程收到 flash 且窗口未聚焦/最小化时 `win.flashFrame(true)`，focus 事件即停；ui.js 在 cd:zero 时发送。
 - 验证：bridge 16 项 + command-model 21 项契约；45 契约 1207 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 重连：ADB 离线一键重连（v1.27.0，2026-09-26 零点，功能）
+- 动机：无线设备掉线后要手输 IP 才能重连；设备列表行内状态由数据驱动——离线行出现「连」按钮、在线即消失，零新增流程。
+- 实现：device-view 事件面加 reconnect（离线/未授权行渲染 .d-rec）；adb.js 分支——serial 含「:」走既有 connectionController.connect（8s 超时/scan/离线诊断日志全现成），USB 走 `adb reconnect <serial>`；契约 +4（离线行有/在线行无/事件载荷）。
+- 验证：45 契约 1217 断言 + 九组 cycle + 无线真机 e2e 全绿。
 ### 方向 自启：开机自启（v1.26.0，2026-09-26 零点，功能）
 - 动机：常驻装置的最后一环——装完即常驻，开机不用手动拉起。
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
@@ -96,6 +101,10 @@
 ` 会先被外层模板解析成真实换行再注入页面——页面侧需双重转义（`\r\n`）；sed 的 `
 ` 也会变真实换行，注入类断言一律用 Edit 而非 sed。
 - 验证：cycle33 扩至 24 断言；45 契约 1213 断言 + 九组 cycle + 无线真机 e2e 全绿。
+### 方向 重连：ADB 离线一键重连（v1.27.0，2026-09-26 零点，功能）
+- 动机：无线设备掉线后要手输 IP 才能重连；设备列表行内状态由数据驱动——离线行出现「连」按钮、在线即消失，零新增流程。
+- 实现：device-view 事件面加 reconnect（离线/未授权行渲染 .d-rec）；adb.js 分支——serial 含「:」走既有 connectionController.connect（8s 超时/scan/离线诊断日志全现成），USB 走 `adb reconnect <serial>`；契约 +4（离线行有/在线行无/事件载荷）。
+- 验证：45 契约 1217 断言 + 九组 cycle + 无线真机 e2e 全绿。
 ### 方向 自启：开机自启（v1.26.0，2026-09-26 零点，功能）
 - 动机：常驻装置的最后一环——装完即常驻，开机不用手动拉起。
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。

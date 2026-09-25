@@ -83,8 +83,18 @@ assert.deepEqual(events[4], { kind: 'remove', serial: 'usb-1' });
 assert.deepEqual(events[5], { kind: 'toggle', serial: 'old-usb', on: false });
 assert.deepEqual(events[6], { kind: 'remove', serial: 'old-usb' });
 
+// 离线行一键重连（v1.27.0）：离线/未授权行有「连」按钮、在线行没有；点击发 reconnect 事件
+const offline = { serial: '192.168.1.9:5555', name: '掉线无线机', state: 'offline', on: false, L: null };
+view.render({ devices: [offline, online], saved: {} }, { onEvent: event => events.push(event) });
+assert.equal(root.children.length, 2);
+assert.ok(root.children[0].querySelector('.d-rec'), '离线行应有重连按钮');
+assert.equal(root.children[1].querySelector('.d-rec'), null, '在线行不应有重连按钮');
+const recBtn = root.children[0].querySelector('.d-rec');
+recBtn.listeners.click?.();
+assert.deepEqual(events[events.length - 1], { kind: 'reconnect', serial: '192.168.1.9:5555' });
+
 view.render({ devices: [], saved: {} }, { onEvent: event => events.push(event) });
 assert.equal(root.innerHTML.includes('尚未发现设备'), true);
 assert.equal(root.children.length, 0);
 
-console.log('adb-device-view contract: 19 assertions passed');
+console.log('adb-device-view contract: 23 assertions passed');

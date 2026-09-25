@@ -45,6 +45,7 @@ export type AdbDeviceViewEvent =
   | { kind: 'toggle'; serial: string; on: boolean }
   | { kind: 'calibrate'; serial: string }
   | { kind: 'tap'; serial: string }
+  | { kind: 'reconnect'; serial: string }
   | { kind: 'remove'; serial: string };
 
 export interface AdbDeviceViewHandlers {
@@ -108,6 +109,10 @@ export function createAdbDeviceView(options: AdbDeviceViewOptions = {}): AdbDevi
     required(row.querySelector('.d-del'), '.d-del').addEventListener('click', () => {
       handlers.onEvent({ kind: 'remove', serial: device.serial });
     });
+    const rec = row.querySelector('.d-rec');
+    if (rec) rec.addEventListener('click', () => {   // 离线/未授权行的一键重连（v1.27.0）
+      handlers.onEvent({ kind: 'reconnect', serial: device.serial });
+    });
   }
 
   function bindSaved(row: AdbDeviceViewNode, serial: string): void {
@@ -135,6 +140,7 @@ export function createAdbDeviceView(options: AdbDeviceViewOptions = {}): AdbDevi
       '<span class="d-lat" title="传输延迟（echo 往返中位）">' + (device.L != null ? device.L + 'ms' : '—') + '</span>' +
       '<button class="d-cal" title="测量传输延迟">校</button>' +
       '<button class="d-tap" title="点一下屏幕中心（测试）">点</button>' +
+      (device.state === 'device' ? '' : '<button class="d-rec" title="重新连接（无线走 connect，USB 走 reconnect offline）">连</button>') +
       '<button class="d-del" title="从列表移除（重新连接会再次出现）">' + removeIcon + '</button>' +
       '<label class="ck-inline" title="参与齐射"><input type="checkbox" class="d-on"' + (device.on ? ' checked' : '') + '></label>';
     bindOnline(row, device);
