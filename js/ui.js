@@ -289,6 +289,37 @@
     if (expBeats) expBeats.addEventListener('click', () => downloadCsv('timecore-beats.csv', TC.Beats.exportCsv()));
     const expCd = document.getElementById('exp-cd');
     if (expCd) expCd.addEventListener('click', () => { try { downloadCsv('timecore-countdown.csv', firedStats.serializeCsv()); } catch (_) {} });
+
+    // 配置备份导出/导入（v1.28.0）：白名单键打包 JSON；导入经域模块校验后回写并刷新
+    const CONFIG_KEYS = ['tc.vol', 'tc.mute', 'tc.tick', 'tc.softlead', 'tc.metrofull', 'tc.freerun', 'tc.track', 'tc.tz', 'tc.hue', 'tc.xparent', 'tc.welcomed', 'tc.hint.clock', 'tc.adb.v1', 'tc.beatstats.v1', 'tc.cdstats.v1', 'tc.sndpack'];
+    const configBackup = TimeCoreDomain.createConfigBackup(CONFIG_KEYS);
+    const expCfg = document.getElementById('exp-config');
+    if (expCfg) expCfg.addEventListener('click', () => {
+      const entries = configBackup.collect(k => localStorage.getItem(k));
+      downloadCsv('timecore-config.json', configBackup.serialize(entries));
+      toast('配置已导出（' + Object.keys(entries).length + ' 项）');
+    });
+    const impCfg = document.getElementById('imp-config');
+    const impFile = document.getElementById('imp-config-file');
+    if (impCfg && impFile) {
+      impCfg.addEventListener('click', () => impFile.click());
+      impFile.addEventListener('change', () => {
+        const file = impFile.files && impFile.files[0];
+        impFile.value = '';
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const parsed = configBackup.parse(String(reader.result));
+          if (!parsed.ok) { toast('导入失败：不是有效的 TIMECORE 配置文件'); return; }
+          const n = Object.keys(parsed.entries).length;
+          if (!n) { toast('导入失败：文件中没有可用的配置项'); return; }
+          for (const k of Object.keys(parsed.entries)) localStorage.setItem(k, parsed.entries[k]);
+          toast('已导入 ' + n + ' 项配置，正在刷新…');
+          setTimeout(() => location.reload(), 900);
+        };
+        reader.readAsText(file);
+      });
+    }
     el.softlead.value = TC.Audio.softLead;
     el.softlead.addEventListener('input', () => TC.Audio.setSoftLead(el.softlead.value));
     const mf = document.getElementById('set-metrofull');

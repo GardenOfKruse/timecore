@@ -57,6 +57,7 @@ const MODULES = [
   ['js/generated/window-bounds-model.js', ['src/domain/window/window-bounds-model.ts']],
   ['js/generated/window-command-model.js', ['src/domain/window/window-command-model.ts']],
   ['js/generated/window-controller.js', ['src/application/window/window-controller.ts']],
+  ['js/generated/config-backup.js', ['src/domain/window/config-backup.ts']],
 ];
 
 let failed = 0;
