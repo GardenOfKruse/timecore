@@ -123,6 +123,7 @@
     <div class="row"><input id="adb-path" placeholder="adb.exe 路径（留空自动检测）"><button id="adb-detect">检测</button></div>
     <div class="row"><span id="adb-status" class="small" style="flex:1">—</span><button id="adb-download" hidden>⬇ 下载 adb</button></div>
     <div class="row adb-gate"><button id="adb-scan" class="primary">扫描设备</button><input id="adb-connect" placeholder="IP:端口 无线连接"><button id="adb-connect-btn">连接</button></div>
+    <div class="row adb-gate"><input id="adb-pair" placeholder="IP:配对端口（无线调试内点「使用配对码」）" style="flex:1"><input id="adb-pair-code" placeholder="配对码" maxlength="6" style="max-width:72px"><button id="adb-pair-btn" title="Android 11+ 无线调试需先配对一次">配对</button></div>
     <div id="adb-devices" class="adb-gate"></div>
     <div class="row globals adb-gate" title="点击时刻 = 节点 − 提前量 − 传输延迟（自动校准）；各项含义见悬停提示">
       <span>提前量</span><input id="adb-lead" type="number" style="width:58px"><span>ms</span>
@@ -264,7 +265,7 @@
 <script src="js/generated/adb-script-builder.js?v=1"></script>
 <script src="js/generated/adb-executor.js?v=1"></script>
 <script src="js/generated/adb-fire-controller.js?v=1"></script>
-<script src="js/adb.js?v=166"></script>
+<script src="js/adb.js?v=169"></script>
 <script src="js/main.js?v=148"></script>
 <script src="js/test.js?v=147"></script>
 </body>

@@ -162,6 +162,17 @@
     device: serial => deviceRegistry.get(serial),
     log
   }) : null;
+  async function pairDevice() {   // Android 11+ 无线调试配对（v1.32.0）：手机点「使用配对码配对设备」后把 IP:配对端口 与 6 位码填进来
+    const target = $('adb-pair').value.trim();
+    const code = $('adb-pair-code').value.trim();
+    if (!/:\d+$/.test(target)) { log('配对：先在手机「无线调试」里点「使用配对码配对设备」，填入显示的 IP:配对端口'); return; }
+    if (!/^\d{6}$/.test(code)) { log('配对：请输入手机显示的 6 位配对码'); return; }
+    const r = await adbExecutor.exec(availabilityState().path, ['pair', target, code], { timeoutMs: 12000 });
+    const msg = ((r.stdout || r.stderr || r.error || '') + '').trim().slice(0, 80);
+    if (r.ok && /success/i.test(msg)) log('✓ 配对成功——回无线调试主屏，把 IP:调试端口 填到上方「无线连接」后点连接');
+    else log('配对失败：' + (msg || '未知错误') + '（配对端口每次进入配对界面都会变）');
+  }
+
   function connect(ip) { return connectionController ? connectionController.connect(ip) : Promise.resolve(); }
 
   /* ---------- 脚本生成 ---------- */
@@ -482,6 +493,7 @@
     $('adb-download').addEventListener('click', downloadAdb);
     $('adb-detect').addEventListener('click', () => detect($('adb-path').value.trim()));
     $('adb-scan').addEventListener('click', () => availabilityState().ok ? scan() : detect());
+    $('adb-pair-btn').addEventListener('click', pairDevice);
     $('adb-connect-btn').addEventListener('click', () => {
       const ip = $('adb-connect').value.trim();
       if (ip) availabilityState().ok ? connect(ip) : log('先检测 adb');
