@@ -48,6 +48,7 @@
 | 心跳 | 倒计时数字心跳 | v1.24.0 | 正常窗口倒计时大数字补上与钟面同语言的秒/分换位动效 | ✅已发版 |
 | 自启 | 开机自启 | v1.26.0 | 设置抽屉开关（隐藏启动），win:get 真值回读；仅桌面端可见 | ✅已发版 |
 | 重连 | ADB 离线一键重连 | v1.27.0 | 离线/未授权设备行内「连」按钮：无线走 connect、USB 走 reconnect，在线即消失 | ✅已发版 |
+| 伴侣 | 局域网伴侣页 | v1.30.0 | 手机浏览器开 URL 只读看时钟+倒计时；默认关、白名单投影、端口冲突自动顺延 | ✅已发版 |
 | 备份 | 配置备份导出/导入 | v1.28.0 | localStorage 偏好白名单打包 JSON，导入经域模块校验后刷新生效 | ✅已发版 |
 | 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
 | 拆分2 | scene3d 拆分·星野流星 | v1.29.0 | 星野+流星块拆 scene-starsky.js（tick/spawn/boost 接口），主文件 829→754 行 | ✅已发版 |
@@ -97,6 +98,11 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 伴侣：局域网伴侣页（v1.30.0，2026-09-27 零点后，大件功能/§7 backlog 清空）
+- 动机：§7 最后一条 backlog——直播/齐射时人站在房间另一头，手机看节点。只读镜像，无敏感数据出门。
+- 实现：三模块分层——`companion-protocol.ts` 域协议（命令路由+11 字段白名单投影，嵌套值不投影，契约 13 项）；`electron/companion-server.js` 独立 HTTP 服务器（SSE 实时流 + /state 兜底 + 内嵌零依赖伴侣页，端口冲突按候选序列顺延）；main.js 仅 ~15 行接线（companion IPC + win:get.companion 真值回读含 lanUrl）。默认关、抽屉开关仅桌面端可见、关闭即拒连。
+- 安全：状态白名单投影（ADB 配置/统计/localStorage 一概不出门，cycle34 断言零泄漏）；导出导入/统计等其余数据面不经过服务器。
+- 验证：新 cycle34 八断言（默认关拒连/开关真值/首页/实时递减/白名单零泄漏/SSE 帧/端口冲突顺延 8400/关闭拒连）；47 契约 1243 断言 + 十组 cycle + 无线真机 e2e 全绿。
 ### 方向 拆分2：scene3d 星野流星块（v1.29.0，2026-09-27 零点后，代码结构）
 - 动机：v1.25 拆分计划的第二刀——星野 320 星 + 流星块自带状态（starMat/meteorT/meteorNext），是 scene3d 中最后一个高内聚可拆块。
 - 实现：`js/scene-starsky.js` 工厂 `create(scene, glowTexture)`，暴露 tick(dt,t,quality)/spawnMeteor/boost(quality)/hasStars/meteorActive；scene3d 829→754 行，TC.Scene.meteor 与 debugSun 探针经适配层语义不变。
@@ -133,6 +139,11 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 伴侣：局域网伴侣页（v1.30.0，2026-09-27 零点后，大件功能/§7 backlog 清空）
+- 动机：§7 最后一条 backlog——直播/齐射时人站在房间另一头，手机看节点。只读镜像，无敏感数据出门。
+- 实现：三模块分层——`companion-protocol.ts` 域协议（命令路由+11 字段白名单投影，嵌套值不投影，契约 13 项）；`electron/companion-server.js` 独立 HTTP 服务器（SSE 实时流 + /state 兜底 + 内嵌零依赖伴侣页，端口冲突按候选序列顺延）；main.js 仅 ~15 行接线（companion IPC + win:get.companion 真值回读含 lanUrl）。默认关、抽屉开关仅桌面端可见、关闭即拒连。
+- 安全：状态白名单投影（ADB 配置/统计/localStorage 一概不出门，cycle34 断言零泄漏）；导出导入/统计等其余数据面不经过服务器。
+- 验证：新 cycle34 八断言（默认关拒连/开关真值/首页/实时递减/白名单零泄漏/SSE 帧/端口冲突顺延 8400/关闭拒连）；47 契约 1243 断言 + 十组 cycle + 无线真机 e2e 全绿。
 ### 方向 拆分2：scene3d 星野流星块（v1.29.0，2026-09-27 零点后，代码结构）
 - 动机：v1.25 拆分计划的第二刀——星野 320 星 + 流星块自带状态（starMat/meteorT/meteorNext），是 scene3d 中最后一个高内聚可拆块。
 - 实现：`js/scene-starsky.js` 工厂 `create(scene, glowTexture)`，暴露 tick(dt,t,quality)/spawnMeteor/boost(quality)/hasStars/meteorActive；scene3d 829→754 行，TC.Scene.meteor 与 debugSun 探针经适配层语义不变。

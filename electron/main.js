@@ -7,6 +7,13 @@ require('../js/generated/window-bounds-model.js');
 const windowBoundsModel = globalThis.TimeCoreDomain.createWindowBoundsModel();
 require('../js/generated/window-command-model.js');
 const windowCommandModel = globalThis.TimeCoreDomain.createWindowCommandModel();
+require('../js/generated/companion-protocol.js');
+const companionProtocol = globalThis.TimeCoreDomain.createCompanionProtocol();
+const { createCompanionServer } = require('./companion-server.js');
+const companionServer = createCompanionServer({
+  log: msg => { try { console.log('[companion]', msg); } catch (_) {} }
+});
+let companionLan = false;
 
 /* 测试隔离：TC_TMP_PROFILE 指定时使用独立 userData，避免污染真实配置 */
 if (process.env.TC_TMP_PROFILE) app.setPath('userData', process.env.TC_TMP_PROFILE);
@@ -214,6 +221,24 @@ function showContextMenu() {
   menu.popup({ window: win });
 }
 
+ipcMain.on('companion', (ev, cmd, arg) => {
+  const intent = companionProtocol.routeCommand(cmd, arg);
+  if (!intent) return;
+  if (intent.type === 'set-enabled') {
+    companionLan = intent.enabled;
+    if (intent.enabled) {
+      companionServer.start(8399, '0.0.0.0', 10).then(port => {
+        if (win) pushState();
+      });
+    } else {
+      companionServer.stop();
+      if (win) pushState();
+    }
+  } else if (intent.type === 'push-state') {
+    companionServer.setState(intent.state);
+  }
+});
+
 ipcMain.on('win', (ev, cmd, arg) => {
   if (!win) return;
   const intent = windowCommandModel.route(cmd, arg);
@@ -242,6 +267,7 @@ ipcMain.handle('win:get', () => ({
     top: win ? win.isAlwaysOnTop() : false, fs: fsState, clock: clockMode
   }),
   ver: app.getVersion(),
+  companion: companionServer.info(companionLan),
   login: (() => { try { return app.getLoginItemSettings().openAtLogin; } catch (_) { return false; } })()
 }));
 

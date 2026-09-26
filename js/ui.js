@@ -364,6 +364,27 @@
       });
     }
 
+    // 局域网伴侣（v1.30.0）：开关经 set-enabled 起/停服务器；状态经白名单投影推送
+    const compRow = document.getElementById('row-companion');
+    const compCb = document.getElementById('set-companion');
+    if (compRow && compCb && window.electronAPI) {
+      compRow.hidden = false;
+      (async () => {
+        const st = await window.electronAPI.get();
+        const comp = st && st.companion;
+        compCb.checked = !!(comp && comp.on);
+        if (comp && comp.on && comp.url) toast('伴侣页运行中：' + (comp.lanUrl || comp.url));
+      })();
+      compCb.addEventListener('change', () => {
+        window.electronAPI.companion('set-enabled', compCb.checked);
+        if (!compCb.checked) toast('局域网伴侣已关闭');
+        else setTimeout(async () => {
+          const st = await window.electronAPI.get();
+          if (st && st.companion && st.companion.on) toast('伴侣页：' + (st.companion.lanUrl || st.companion.url) + (st.companion.lanUrl ? '（手机连同一 Wi-Fi 打开）' : ''));
+        }, 600);
+      });
+    }
+
     // Electron：窗口控制统一在标题栏（置顶/最小化/全屏/关闭）
     if (window.electronAPI) {
       windowController = TimeCoreDomain.createWindowController(window.electronAPI);
@@ -561,6 +582,16 @@
     ['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(ev => window.addEventListener(ev, pokeIdle, { passive: true }));
     pokeIdle();
     setInterval(() => { if (idleOn) { const cd = TC.Countdown.info(); if (cd.armed && !cd.fired) setIdle(false); } }, 2000);
+
+    // 伴侣页状态推送（v1.30.0）：cd 事件即时推 + 1s 兜底；白名单投影由协议模块负责
+    function pushCompanion() {
+      if (!window.electronAPI) return;
+      const info = TC.Countdown.info();
+      info.epoch = TC.time.epoch();
+      window.electronAPI.companion('push-state', info);
+    }
+    ['cd:start', 'cd:stop', 'cd:zero', 'cd:advance', 'cd:done', 'phase'].forEach(ev => TC.bus.on(ev, pushCompanion));
+    setInterval(pushCompanion, 1000);
     TC.bus.on('tz', () => { el.tz.value = TC.Clock.tz; });
 
     // 倒计时状态事件 → 开始/停止按钮

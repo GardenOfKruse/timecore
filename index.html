@@ -103,6 +103,7 @@
     <label class="row btns"><span>窗口透明度</span><input id="set-opacity" type="range" min="30" max="100" step="5" value="100" hidden></label>
     <label class="ck"><input id="set-xparent" type="checkbox"> 透明背景（桌面端生效）</label>
     <label class="ck" id="row-login" hidden><input id="set-login" type="checkbox"> 开机自动启动（隐藏启动）</label>
+    <label class="ck" id="row-companion" hidden><input id="set-companion" type="checkbox"> 局域网伴侣（手机看倒计时，默认 8399 起）</label>
     <div class="row dim small" id="beat-stats" style="min-height:1.2em">今日击拍 —</div>
     <div class="row dim small" id="cd-stats" style="min-height:1.2em">今日到点 0 · 累计 0</div>
     <div class="row btns dim small"><a href="#" id="exp-beats" style="color:inherit">导出击拍 CSV</a> · <a href="#" id="exp-cd" style="color:inherit">导出到点 CSV</a></div>
@@ -239,7 +240,8 @@
 <script src="js/scene3d.js?v=168"></script>
 <script src="js/generated/window-controller.js?v=1"></script>
 <script src="js/generated/config-backup.js?v=1"></script>
-<script src="js/ui.js?v=160"></script>
+<script src="js/generated/companion-protocol.js?v=1"></script>
+<script src="js/ui.js?v=161"></script>
 <script src="js/generated/action-timeline.js?v=1"></script>
 <script src="js/generated/adb-emission-gate.js?v=1"></script>
 <script src="js/generated/adb-schedule-coordinator.js?v=1"></script>

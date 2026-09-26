@@ -58,6 +58,7 @@ const MODULES = [
   ['js/generated/window-command-model.js', ['src/domain/window/window-command-model.ts']],
   ['js/generated/window-controller.js', ['src/application/window/window-controller.ts']],
   ['js/generated/config-backup.js', ['src/domain/window/config-backup.ts']],
+  ['js/generated/companion-protocol.js', ['src/domain/window/companion-protocol.ts']],
 ];
 
 let failed = 0;
