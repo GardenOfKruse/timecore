@@ -9,6 +9,28 @@
   let windowController = null;
   let toastTimer = 0, vignetteTimer = 0;
 
+  // 时间裂缝（v1.31.0）：挂起唤醒/隔夜重开时装置知道你离开过——抽屉记一行，非布防时补一颗流星
+  let lastSeen = parseInt(localStorage.getItem('tc.lastseen'), 10);
+  if (!Number.isFinite(lastSeen)) lastSeen = 0;
+  function markSeen() {
+    try { localStorage.setItem('tc.lastseen', String(Date.now())); } catch (_) {}
+    lastSeen = Date.now();
+  }
+  function checkGap() {
+    const gap = TimeCoreDomain.evaluateGap(lastSeen, Date.now());
+    markSeen();
+    if (!gap.crossed) return null;
+    const armedNow = TC.Countdown.info().armed;
+    const label = TimeCoreDomain.formatGap(gap.gapMs);
+    const box = document.getElementById('gap-note');
+    if (box) {
+      box.hidden = false;
+      box.textContent = '离开 ' + label + ' · 欢迎回来';
+    }
+    if (!armedNow) TC.Scene.meteor();   // 布防中静默：仪式不被打断
+    return { gapMs: gap.gapMs, label, armedNow };
+  }
+
   // 闲置自流动（v1.16.0）：600s 无输入 → body.idle 界面退场；布防等触发期间不生效，任意输入即恢复。
   // 状态机在 IIFE 顶层（TC.UI.forceIdle/idleState 出口与 bindControls 的监听注册共用）。
   const IDLE_MS = 600000;
@@ -363,6 +385,16 @@
         toast('开机自动启动已' + (loginCb.checked ? '开启（隐藏启动）' : '关闭'));
       });
     }
+
+    // 时间裂缝：boot 与每次回到可见各查一次；前台每 30s 心跳写 lastseen
+    checkGap();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        const r = checkGap();   // hidden 侧不写 lastseen：30s 心跳已是活跃证明，写NOW会抹掉真实离开时长
+        if (r) toast('离开 ' + r.label + ' · 欢迎回来');
+      }
+    });
+    setInterval(markSeen, 30000);
 
     // 局域网伴侣（v1.30.0）：开关经 set-enabled 起/停服务器；状态经白名单投影推送
     const compRow = document.getElementById('row-companion');
@@ -730,6 +762,7 @@
     renderCd, renderSync, toast,
     // 倒计时数字心跳探针（v1.24.0）
     debugCdTick() { return { mm: el.rmm.textContent, ss: el.rss.textContent, ms: el.rms.textContent, ticks: cdTickN }; },
+    debugGap(prev, now) { return TimeCoreDomain.evaluateGap(prev, now); },
     // 闲置自流动（v1.16.0）测试钩子：强制翻转 + 状态探针（真实 600s 边界等不起）
     forceIdle(on) { if (on) { clearTimeout(idleTimer); setIdle(true); } else pokeIdle(); },
     idleState() { return idleOn; }

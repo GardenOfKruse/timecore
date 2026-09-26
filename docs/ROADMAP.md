@@ -50,6 +50,7 @@
 | 重连 | ADB 离线一键重连 | v1.27.0 | 离线/未授权设备行内「连」按钮：无线走 connect、USB 走 reconnect，在线即消失 | ✅已发版 |
 | 伴侣 | 局域网伴侣页 | v1.30.0 | 手机浏览器开 URL 只读看时钟+倒计时；默认关、白名单投影、端口冲突自动顺延 | ✅已发版 |
 | 备份 | 配置备份导出/导入 | v1.28.0 | localStorage 偏好白名单打包 JSON，导入经域模块校验后刷新生效 | ✅已发版 |
+| 裂缝 | 时间裂缝 | v1.31.0 | 挂起唤醒/隔夜重开时星空补流星+抽屉记「离开 X」，布防中静默 | ✅已发版 |
 | 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
 | 拆分2 | scene3d 拆分·星野流星 | v1.29.0 | 星野+流星块拆 scene-starsky.js（tick/spawn/boost 接口），主文件 829→754 行 | ✅已发版 |
 | Z | 到点任务栏闪烁 | v1.22.0 | 窗口最小化/失焦时到点闪烁任务栏吸引注意，回窗即停 | ✅已发版 |
@@ -98,6 +99,10 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 裂缝：时间裂缝（v1.31.0，2026-09-27 零点后，玩法）
+- 动机：挂起唤醒/隔夜重开时装置毫无表示——「时间的流动感」应包括承认你离开过：回来时星空补一颗流星，抽屉轻记一行。
+- 实现：`src/domain/clock/gap-model.ts`（>90s 判裂缝/时间倒退判无/人读格式，契约 20 项）；ui.js 于 boot 与每次回到可见各查一次（tc.lastseen 由 30s 心跳维护，hidden 侧刻意不写——否则 reload 的 hidden 事件会抹掉真实离开时长，cycle33 断言抓出后修正）；布防中静默只记行，非布防补一颗流星（现成语汇）。
+- 验证：cycle33 扩至 27 断言（伪造 200s lastseen → reload → 抽屉「离开 3m · 欢迎回来」）；45 契约 1213+ 断言 + 九组 cycle + 无线真机 e2e 全绿。
 ### 方向 伴侣：局域网伴侣页（v1.30.0，2026-09-27 零点后，大件功能/§7 backlog 清空）
 - 动机：§7 最后一条 backlog——直播/齐射时人站在房间另一头，手机看节点。只读镜像，无敏感数据出门。
 - 实现：三模块分层——`companion-protocol.ts` 域协议（命令路由+11 字段白名单投影，嵌套值不投影，契约 13 项）；`electron/companion-server.js` 独立 HTTP 服务器（SSE 实时流 + /state 兜底 + 内嵌零依赖伴侣页，端口冲突按候选序列顺延）；main.js 仅 ~15 行接线（companion IPC + win:get.companion 真值回读含 lanUrl）。默认关、抽屉开关仅桌面端可见、关闭即拒连。
@@ -139,6 +144,10 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 裂缝：时间裂缝（v1.31.0，2026-09-27 零点后，玩法）
+- 动机：挂起唤醒/隔夜重开时装置毫无表示——「时间的流动感」应包括承认你离开过：回来时星空补一颗流星，抽屉轻记一行。
+- 实现：`src/domain/clock/gap-model.ts`（>90s 判裂缝/时间倒退判无/人读格式，契约 20 项）；ui.js 于 boot 与每次回到可见各查一次（tc.lastseen 由 30s 心跳维护，hidden 侧刻意不写——否则 reload 的 hidden 事件会抹掉真实离开时长，cycle33 断言抓出后修正）；布防中静默只记行，非布防补一颗流星（现成语汇）。
+- 验证：cycle33 扩至 27 断言（伪造 200s lastseen → reload → 抽屉「离开 3m · 欢迎回来」）；45 契约 1213+ 断言 + 九组 cycle + 无线真机 e2e 全绿。
 ### 方向 伴侣：局域网伴侣页（v1.30.0，2026-09-27 零点后，大件功能/§7 backlog 清空）
 - 动机：§7 最后一条 backlog——直播/齐射时人站在房间另一头，手机看节点。只读镜像，无敏感数据出门。
 - 实现：三模块分层——`companion-protocol.ts` 域协议（命令路由+11 字段白名单投影，嵌套值不投影，契约 13 项）；`electron/companion-server.js` 独立 HTTP 服务器（SSE 实时流 + /state 兜底 + 内嵌零依赖伴侣页，端口冲突按候选序列顺延）；main.js 仅 ~15 行接线（companion IPC + win:get.companion 真值回读含 lanUrl）。默认关、抽屉开关仅桌面端可见、关闭即拒连。

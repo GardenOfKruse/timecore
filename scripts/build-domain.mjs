@@ -48,6 +48,7 @@ const MODULES = [
   ['js/generated/sound-pack.js', ['src/domain/audio/sound-pack.ts']],
   ['js/generated/electron-bridge.js', ['src/adapters/electron/electron-bridge.ts']],
   ['js/generated/hour-crossing.js', ['src/domain/clock/hour-crossing.ts']],
+  ['js/generated/gap-model.js', ['src/domain/clock/gap-model.ts']],
   ['js/generated/moon-phase.js', ['src/domain/scene/moon-phase.ts']],
   ['electron/preload.js', ['src/adapters/electron/electron-bridge.ts', 'src/adapters/electron/preload-entry.ts']],
   ['js/generated/runtime-loop.js', ['src/adapters/browser/runtime-loop.ts']],

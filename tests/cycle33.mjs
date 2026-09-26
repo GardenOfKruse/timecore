@@ -190,6 +190,17 @@ const loginSt = JSON.parse(await js(`(async () => {
 })()`));
 check('开机自启：win:get 真值回读字段存在', loginSt.hasLoginField === true && loginSt.type === 'boolean', loginSt);
 
+// W: 时间裂缝——伪造 lastseen 重载后，抽屉行出现「离开」且 gap 探针可用
+const gapT = await js(`(async () => {
+  localStorage.setItem('tc.lastseen', String(Date.now() - 200000));   // 伪造 200s 前离开
+  location.reload();
+})()`);
+await sleep(2600);
+try { await js(`document.getElementById('wl-skip').click()`); } catch (_) {}
+await waitJs('!!window.TC', 6000);
+const gapAfter = JSON.parse(await js(`JSON.stringify({ note: document.getElementById('gap-note').textContent, noteHidden: document.getElementById('gap-note').hidden, seen: parseInt(localStorage.getItem('tc.lastseen'), 10) > Date.now() - 60000 })`));
+check('时间裂缝：唤醒后记一行离开时长', /离开 [0-9]+m/.test(gapAfter.note) && gapAfter.noteHidden === false && gapAfter.seen === true, gapAfter);
+
 // T: 统计 CSV 导出——域模块生成、渲染端可取
 const csvOk = JSON.parse(await js(`(async () => {
   TC.Beats.hit(TC.time.epoch(), -20);
