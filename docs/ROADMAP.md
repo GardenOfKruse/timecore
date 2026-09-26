@@ -50,6 +50,7 @@
 | 重连 | ADB 离线一键重连 | v1.27.0 | 离线/未授权设备行内「连」按钮：无线走 connect、USB 走 reconnect，在线即消失 | ✅已发版 |
 | 备份 | 配置备份导出/导入 | v1.28.0 | localStorage 偏好白名单打包 JSON，导入经域模块校验后刷新生效 | ✅已发版 |
 | 拆分 | scene3d 拆分+帧循环卫生 | v1.25.0 | 942 行巨石拆出纹理工厂（125 行），?moonage/?dayofyear 正则从每帧改 init 一次 | ✅已发版 |
+| 拆分2 | scene3d 拆分·星野流星 | v1.29.0 | 星野+流星块拆 scene-starsky.js（tick/spawn/boost 接口），主文件 829→754 行 | ✅已发版 |
 | Z | 到点任务栏闪烁 | v1.22.0 | 窗口最小化/失焦时到点闪烁任务栏吸引注意，回窗即停 | ✅已发版 |
 
 > 合并说明：A-D 四个方向均零操作成本、彼此独立且全部 E2E 绿，合并为一个 v1.3.1 发布，避免连发多版刷屏。
@@ -96,6 +97,10 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 拆分2：scene3d 星野流星块（v1.29.0，2026-09-27 零点后，代码结构）
+- 动机：v1.25 拆分计划的第二刀——星野 320 星 + 流星块自带状态（starMat/meteorT/meteorNext），是 scene3d 中最后一个高内聚可拆块。
+- 实现：`js/scene-starsky.js` 工厂 `create(scene, glowTexture)`，暴露 tick(dt,t,quality)/spawnMeteor/boost(quality)/hasStars/meteorActive；scene3d 829→754 行，TC.Scene.meteor 与 debugSun 探针经适配层语义不变。
+- 验证：九组 cycle + 45 契约 1213 断言 + 无线真机 e2e 全绿。
 ### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
 - 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
 - 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。
@@ -128,6 +133,10 @@
 - 实现：window-command-model 新意图 set-login（非布尔按 false，契约 +3）；ElectronBridge 白名单放行；主进程 `app.setLoginItemSettings({openAtLogin, openAsHidden:true})`（隐藏启动由 ready-to-show 流程接管），win:get 增 login 真值回读（注册表为准）；抽屉开关仅桌面端可见。
 - 测试安全：TC_TMP_PROFILE 只隔离 userData 不隔离登录项注册表——测试只断言字段存在与链路，从不真开。
 - 验证：cycle33 扩至 26 断言（win:get.login 布尔回读）；九组 cycle + 无线真机 e2e 全绿。
+### 方向 拆分2：scene3d 星野流星块（v1.29.0，2026-09-27 零点后，代码结构）
+- 动机：v1.25 拆分计划的第二刀——星野 320 星 + 流星块自带状态（starMat/meteorT/meteorNext），是 scene3d 中最后一个高内聚可拆块。
+- 实现：`js/scene-starsky.js` 工厂 `create(scene, glowTexture)`，暴露 tick(dt,t,quality)/spawnMeteor/boost(quality)/hasStars/meteorActive；scene3d 829→754 行，TC.Scene.meteor 与 debugSun 探针经适配层语义不变。
+- 验证：九组 cycle + 45 契约 1213 断言 + 无线真机 e2e 全绿。
 ### 方向 拆分：scene3d 拆分 + 帧循环卫生（v1.25.0，2026-09-25 深夜，代码结构）
 - 动机：scene3d.js 942 行是全场最大桥接文件；subagent 实测定位到内聚的纹理工厂块（零共享可变状态）作为最安全先手刀，并发现 updateSun/moonEpoch 每帧各跑一次 location.search 正则（测试覆盖参数是会话常量）。
 - 实现：纹理五件套（glow/env/mulberry32/makeFbm/planetTextures）拆至 `js/scene-textures.js`（125 行，挂 window.SceneTextures）；?moonage/?dayofyear 解析提升为 init 一次的 URL_FLAGS 常量；scene3d 829 行，探针出口逐字节不变。
