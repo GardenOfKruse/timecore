@@ -139,6 +139,11 @@
         patch.TI = Math.max(0, Math.min(1000, med - latency));
       }
     }
+    try {   // 电量顺手采集（v1.33.0）：与延迟同批次，失败静默不影响既有字段
+      const bat = await adbExecutor.exec(availabilityState().path, ['-s', serial, 'shell', 'dumpsys battery'], { timeoutMs: 5000 });
+      const levelMatch = /level:\s*(\d{1,3})/.exec(bat.stdout || '');
+      if (levelMatch) patch.B = Math.min(100, parseInt(levelMatch[1], 10));
+    } catch (_) {}
     deviceRegistry.update(serial, patch);
     const current = deviceRegistry.get(serial) || d;
     scanController.invalidate();   // 强制下一轮刷新行显示

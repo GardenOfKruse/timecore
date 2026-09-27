@@ -9,6 +9,7 @@ export interface AdbDeviceRecord {
   W?: number;
   H?: number;
   TI?: number;
+  B?: number;   // 电量 %（dumpsys battery，探测时顺手采集）
   probedAt?: number;
   test?: boolean;
 }

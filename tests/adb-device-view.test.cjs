@@ -50,7 +50,7 @@ const documentPort = {
 
 const events = [];
 const view = createAdbDeviceView({ document: documentPort });
-const online = { serial: 'usb-1', name: '工作机', state: 'device', on: true, L: 42, W: 1080, H: 2340 };
+const online = { serial: 'usb-1', name: '工作机', state: 'device', on: true, L: 42, B: 87, W: 1080, H: 2340 };
 const unauthorized = { serial: '192.168.1.7:5555', name: '无线机', state: 'unauthorized', on: false, L: null };
 view.render({
   devices: [online, unauthorized],
@@ -58,6 +58,8 @@ view.render({
 }, { onEvent: event => events.push(event) });
 
 assert.equal(root.children.length, 3);
+assert.equal(root.children[0].innerHTML.includes('87%'), true, '电量列显示 87%');
+assert.equal(root.children[0].innerHTML.includes('d-bat'), true);
 assert.equal(root.children[0].querySelector('.d-name').value, '工作机');
 assert.equal(root.children[0].querySelector('.d-on').checked, true);
 assert.equal(root.children[0].querySelector('.d-cal') !== null, true);
@@ -97,4 +99,4 @@ view.render({ devices: [], saved: {} }, { onEvent: event => events.push(event) }
 assert.equal(root.innerHTML.includes('尚未发现设备'), true);
 assert.equal(root.children.length, 0);
 
-console.log('adb-device-view contract: 23 assertions passed');
+console.log('adb-device-view contract: 25 assertions passed');

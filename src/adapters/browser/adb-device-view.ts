@@ -26,6 +26,7 @@ export interface AdbDeviceViewDevice {
   name?: string;
   on?: boolean;
   L?: number | null;
+  B?: number;
   W?: number;
   H?: number;
 }
@@ -138,6 +139,7 @@ export function createAdbDeviceView(options: AdbDeviceViewOptions = {}): AdbDevi
       '<input class="d-name" value="' + quoted(device.name) + '" title="设备名称">' +
       '<span class="d-serial" title="' + quoted(device.serial) + '">' + (state || quoted(device.serial)) + '</span>' +
       '<span class="d-lat" title="传输延迟（echo 往返中位）">' + (device.L != null ? device.L + 'ms' : '—') + '</span>' +
+      '<span class="d-bat" title="电量">' + (device.B != null ? device.B + '%' : '—') + '</span>' +
       '<button class="d-cal" title="测量传输延迟">校</button>' +
       '<button class="d-tap" title="点一下屏幕中心（测试）">点</button>' +
       (device.state === 'device' ? '' : '<button class="d-rec" title="重新连接（无线走 connect，USB 走 reconnect offline）">连</button>') +
