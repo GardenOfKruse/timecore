@@ -65,6 +65,7 @@
       <span class="abs" title="定时：留空日期=今天(或明天)的下一个该时刻；选了日期=那天的那一时刻">
         <input id="cd-abs-date" type="date" title="目标日期（可选）" style="width:118px">
         <input id="cd-abs-time" type="time" step="1" title="时刻">
+        <label class="ck-inline" title="每天到该时刻自动开始倒计时（提前 70 秒布防）"><input id="cd-abs-daily" type="checkbox">每天</label>
         <button id="cd-abs-go">定时</button>
         <button id="cd-abs-hour" title="从下一个整点开始">整点</button>
       </span>
@@ -237,6 +238,7 @@
 <script src="js/generated/solar-declination.js?v=1"></script>
 <script src="js/generated/hour-crossing.js?v=1"></script>
 <script src="js/generated/gap-model.js?v=1"></script>
+<script src="js/generated/daily-trigger.js?v=1"></script>
 <script src="js/generated/camera-motion-model.js?v=1"></script>
 <script src="js/scene-textures.js?v=1"></script>
 <script src="js/scene-starsky.js?v=1"></script>
@@ -244,7 +246,7 @@
 <script src="js/generated/window-controller.js?v=1"></script>
 <script src="js/generated/config-backup.js?v=1"></script>
 <script src="js/generated/companion-protocol.js?v=1"></script>
-<script src="js/ui.js?v=163"></script>
+<script src="js/ui.js?v=164"></script>
 <script src="js/generated/action-timeline.js?v=1"></script>
 <script src="js/generated/adb-emission-gate.js?v=1"></script>
 <script src="js/generated/adb-schedule-coordinator.js?v=1"></script>

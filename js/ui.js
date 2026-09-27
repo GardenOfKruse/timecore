@@ -267,6 +267,43 @@
       TC.Countdown.startSingle(t.getTime());
       el.absGo.blur();
     });
+
+    // 每日自动布防（v1.34.0）：勾选「每天」后点定时，即保存该时刻；每天提前 70 秒自动开始倒数
+    const dailyCb = document.getElementById('cd-abs-daily');
+    if (dailyCb) {
+      let daily = { on: false, hh: 9, mm: 0, ss: 0, firedDate: '' };
+      try { daily = Object.assign(daily, JSON.parse(localStorage.getItem('tc.daily.v1') || '{}')); } catch (_) {}
+      dailyCb.checked = !!daily.on;
+      const saveDaily = () => localStorage.setItem('tc.daily.v1', JSON.stringify(daily));
+      dailyCb.addEventListener('change', () => {
+        daily.on = dailyCb.checked;
+        const v = el.abs.value;
+        if (v) {
+          const p2 = v.split(':').map(x => parseInt(x, 10) || 0);
+          daily.hh = p2[0]; daily.mm = p2[1] || 0; daily.ss = p2[2] || 0;
+        }
+        if (daily.on) {
+          if (!v) { toast('请先选择时刻，再开启每天自动布防'); daily.on = false; dailyCb.checked = false; saveDaily(); return; }
+          saveDaily();
+          toast('每天 ' + String(daily.hh).padStart(2, '0') + ':' + String(daily.mm).padStart(2, '0') + ':' + String(daily.ss).padStart(2, '0') + ' 将自动开始倒数（提前 70 秒布防）');
+        } else {
+          daily.firedDate = '';
+          saveDaily();
+          toast('每天自动布防已关闭');
+        }
+      });
+      window.setInterval(() => {
+        if (!daily.on) return;
+        const offset = -new Date().getTimezoneOffset() * 60000;
+        const r = TimeCoreDomain.dailyDue(TC.time.epoch(), daily.hh, daily.mm, daily.ss, 70000, offset, daily.firedDate || null);
+        if (r.due) {
+          daily.firedDate = r.dateKey;
+          saveDaily();
+          TC.Countdown.startSingle(r.targetEpoch);
+          toast('每日布防：开始倒数到 ' + String(daily.hh).padStart(2, '0') + ':' + String(daily.mm).padStart(2, '0') + ':' + String(daily.ss).padStart(2, '0'));
+        }
+      }, 10000);
+    }
     el.absHour.addEventListener('click', () => {
       const t = new Date(TC.time.epoch() + 60000);
       t.setMinutes(0, 0, 0);
