@@ -79,6 +79,20 @@
     } catch (_) {}
   }
 
+  // 十二时辰被动行（v1.39.0）：酉时 日入 · 距戌时 27 分（夜间加 X更）；30 秒刷新
+  function renderShichen() {
+    const box = document.getElementById('cd-shichen');
+    if (!box) return;
+    try {
+      const s = TimeCoreDomain.shichenInfo(TC.time.epoch());
+      let txt = s.branch + '时 ' + s.alias;
+      if (s.geng) txt += ' · ' + s.geng;
+      txt += ' · 距' + s.nextBranch + '时 ' + s.minutesToNext + ' 分';
+      box.textContent = txt;
+      box.title = '十二时辰（子时 23:00 起）\n' + TimeCoreDomain.SHICHEN_BRANCHES.map((b, i) => b + '时 ' + TimeCoreDomain.SHICHEN_ALIASES[i]).join(' · ');
+    } catch (_) {}
+  }
+
   // 流星雨之夜（v1.38.0）：峰值夜首次启动在裂缝通道淡入一行提示，仅一次；at 参数供测试锚定
   function showerNotice(at) {
     try {
@@ -830,6 +844,8 @@
       renderSync();
       renderTerm();
       setInterval(renderTerm, 600000);
+      renderShichen();
+      setInterval(renderShichen, 30000);
       showerNotice();
       TC.bus.emit('boot');
     },

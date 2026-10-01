@@ -375,6 +375,23 @@ check('流星雨之夜：覆盖探针+峰值夜一次性提示',
   noticeT.first === '英仙座流星雨' && noticeT.line.indexOf('流星雨') >= 0 &&
   noticeT.again === null && noticeT.none === null, { showerOn, showerOff, noticeT });
 
+// R6: 十二时辰——探针锚定 + 抽屉行（v1.39）
+const shT = JSON.parse(await js(`(async () => {
+  const at = cst => { const e = Date.parse(cst); return TC.time.shichen(e); };
+  const zi = at('2026-08-12T23:30:00+08:00');
+  const you = at('2026-08-12T17:00:00+08:00');
+  const line = document.getElementById('cd-shichen');
+  return JSON.stringify({
+    line: line ? line.textContent : null,
+    zi: { b: zi.branch, a: zi.alias, g: zi.geng, n: zi.nextBranch },
+    you: { b: you.branch, a: you.alias, g: you.geng, m: you.minutesToNext }
+  });
+})()`));
+check('十二时辰：探针锚定+抽屉行',
+  shT.zi.b === '子' && shT.zi.a === '夜半' && shT.zi.g === '三更' && shT.zi.n === '丑' &&
+  shT.you.b === '酉' && shT.you.a === '日入' && shT.you.g === null && shT.you.m === 120 &&
+  shT.line && shT.line.indexOf('时') > 0 && shT.line.indexOf('距') > 0, shT);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);
