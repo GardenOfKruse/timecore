@@ -57,4 +57,14 @@ assert.equal(newYear.daysToNext, 4);
 assert.equal(Number.isNaN(T.findSolarTermEpoch('x', 1)), true);
 assert.equal(T.solarTermInfo(NaN).name.length > 0, true, 'NaN 回退当前时刻');
 
-console.log('solar-term contract: 40 assertions passed');
+// 暖度：夏至 +1、冬至 −1、二分 0，越近夏至越暖（v1.37 大气色温用）
+assert.equal(T.solarTermWarmth(kOf('夏至')), 1);
+assert.equal(T.solarTermWarmth(kOf('冬至')), -1);
+assert.equal(T.solarTermWarmth(kOf('春分')), 0);
+assert.equal(T.solarTermWarmth(kOf('秋分')), 0);
+assert.ok(T.solarTermWarmth(kOf('大暑')) > 0.8, '大暑接近最暖');
+assert.ok(T.solarTermWarmth(kOf('大寒')) < -0.8, '大寒接近最冷');
+assert.ok(T.solarTermWarmth(kOf('芒种')) > T.solarTermWarmth(kOf('谷雨')), '越近夏至越暖');
+assert.equal(T.solarTermWarmth('x'), 0, '非法输入回退 0');
+
+console.log('solar-term contract: 48 assertions passed');

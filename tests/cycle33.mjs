@@ -349,6 +349,13 @@ check('节气轮转：探针锚定+抽屉行+当前节气',
   termT.probe.name === '秋分' && termT.probe.next === '寒露' && termT.probe.days === 3 &&
   termT.qf25 === '春分' && termT.dz25 === '冬至', termT);
 
+// R4: 节气色温——?term= 覆盖下大气暖度冬冷夏暖（v1.37）
+await reloadWith('sunhour=12&term=18');
+const winterWarm = JSON.parse(await js(`JSON.stringify({ warm: TC.Scene.debugSun().termWarm, line: document.getElementById('cd-term').textContent })`));
+await reloadWith('sunhour=12&term=6');
+const summerWarm = JSON.parse(await js(`JSON.stringify({ warm: TC.Scene.debugSun().termWarm })`));
+check('节气色温：冬至 −1 / 夏至 +1', winterWarm.warm === -1 && summerWarm.warm === 1, { winterWarm, summerWarm });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

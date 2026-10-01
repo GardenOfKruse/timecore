@@ -99,5 +99,13 @@ var TimeCoreDomain;
         };
     }
     TimeCoreDomain.solarTermInfo = solarTermInfo;
+    /** 节气暖度 −1..1：夏至最暖 +1、冬至最冷 −1、二分 0（黄经余弦，物理即公转位置）。 */
+    function solarTermWarmth(index) {
+        if (!Number.isFinite(index))
+            return 0;
+        const k = ((Math.round(index) % 24) + 24) % 24;
+        return Math.round(Math.cos((k - 6) * 15 * Math.PI / 180) * 1000) / 1000;
+    }
+    TimeCoreDomain.solarTermWarmth = solarTermWarmth;
 })(TimeCoreDomain || (TimeCoreDomain = {}));
 globalThis.TimeCoreDomain = TimeCoreDomain;

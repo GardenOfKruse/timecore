@@ -22,11 +22,24 @@
   const URL_FLAGS = (() => {
     const moon = /moonage=([0-9.]+)/.exec(location.search);
     const doy = /dayofyear=(\d+)/.exec(location.search);
-    return { moonage: moon ? parseFloat(moon[1]) : null, dayofyear: doy ? parseInt(doy[1], 10) : null };
+    const term = /term=(\d{1,2})/.exec(location.search);
+    return {
+      moonage: moon ? parseFloat(moon[1]) : null,
+      dayofyear: doy ? parseInt(doy[1], 10) : null,
+      term: term ? ((parseInt(term[1], 10) % 24) + 24) % 24 : null
+    };
   })();
   let hiddenFrames = 0, lastFrameInfo = null;   // 钟面形态跳帧计数 / 最近一次真实渲染的统计（探针用）
   let idleAcc = 0;   // 闲置降帧行累积器（v1.19.0）
   let sky = null;   // 星野+流星（v1.29.0 拆至 scene-starsky.js）
+  let termWarm = 0, termWarmAt = -1;   // 节气暖度（v1.37.0）：夏至+1 冬至−1；10 分钟刷新，?term=N 覆盖
+  function termWarmOf(e) {
+    if (URL_FLAGS.term != null) return TimeCoreDomain.solarTermWarmth(URL_FLAGS.term);
+    if (e - termWarmAt < 600000 && termWarmAt >= 0) return termWarm;
+    termWarmAt = e;
+    try { termWarm = TimeCoreDomain.solarTermWarmth(TimeCoreDomain.solarTermInfo(e).index); } catch (_) { termWarm = 0; }
+    return termWarm;
+  }
   let sunFmt = null, sunFmtTz = '';
   const sunCache = { k: -1, h: 12 };
   function sunHour(tz, e) {
@@ -600,6 +613,12 @@
     clouds.scale.setScalar(ps);
     atmo.scale.setScalar(ps);
     atmoMat.uniforms.uColor.value.copy(cur.color);
+    const tw = termWarmOf(ctx.epoch);
+    if (tw !== 0) {
+      const ac = atmoMat.uniforms.uColor.value;   // 节气色温（v1.37.0）：冬偏冷夏偏暖 ±10% 分量，盯着看才发现
+      ac.r = Math.max(0, Math.min(1, ac.r * (1 + tw * 0.10)));
+      ac.b = Math.max(0, Math.min(1, ac.b * (1 - tw * 0.10)));
+    }
     atmoMat.uniforms.uOp.value = 0.9 + cur.intensity * 0.6 + ctx.pulse * 0.9;
     // key 光强度已由 updateSun 按昼夜调制，这里不再覆盖
 
@@ -711,6 +730,7 @@
         dayFrac: scene.userData.dayFrac != null ? Math.round(scene.userData.dayFrac * 10000) / 10000 : null,
         yearFrac: scene.userData.yearFrac != null ? Math.round(scene.userData.yearFrac * 100000) / 100000 : null,
         declDeg: scene.userData.declDeg != null ? Math.round(scene.userData.declDeg * 100) / 100 : null,
+        termWarm: Math.round(termWarmOf(Date.now()) * 1000) / 1000,
         hourPulses: hourPulseCount,
         keyColor: k.color.getHexString()
       } : null;
