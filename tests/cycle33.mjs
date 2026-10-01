@@ -356,6 +356,25 @@ await reloadWith('sunhour=12&term=6');
 const summerWarm = JSON.parse(await js(`JSON.stringify({ warm: TC.Scene.debugSun().termWarm })`));
 check('节气色温：冬至 −1 / 夏至 +1', winterWarm.warm === -1 && summerWarm.warm === 1, { winterWarm, summerWarm });
 
+// R5: 流星雨之夜——?shower= 覆盖 + 峰值夜一次性提示钩子（v1.38）
+await reloadWith('shower=1');
+const showerOn = JSON.parse(await js(`JSON.stringify({ s: TC.Scene.debugSun().shower })`));
+await reloadWith('shower=0');
+const showerOff = JSON.parse(await js(`JSON.stringify({ s: TC.Scene.debugSun().shower })`));
+const noticeT = JSON.parse(await js(`(async () => {
+  localStorage.setItem('tc.shower.v1', '2000-01-01');
+  const first = TC.UI.showerNotice(Date.parse('2026-08-12T23:00:00+08:00'));
+  const line = document.getElementById('gap-note').textContent;
+  const again = TC.UI.showerNotice(Date.parse('2026-08-12T23:30:00+08:00'));
+  const none = TC.UI.showerNotice(Date.parse('2026-08-14T23:00:00+08:00'));
+  localStorage.removeItem('tc.shower.v1');
+  return JSON.stringify({ first, line, again, none });
+})()`));
+check('流星雨之夜：覆盖探针+峰值夜一次性提示',
+  showerOn.s === '英仙座流星雨' && showerOff.s === null &&
+  noticeT.first === '英仙座流星雨' && noticeT.line.indexOf('流星雨') >= 0 &&
+  noticeT.again === null && noticeT.none === null, { showerOn, showerOff, noticeT });
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

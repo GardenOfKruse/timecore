@@ -5,6 +5,7 @@
   function create(scene, glowTexture) {
     let stars = null, starMat = null;
     let meteor = null, meteorT = -1, meteorNext = 18 + Math.random() * 20;
+    let showerMode = false;   // 流星雨之夜（v1.38.0）：随机流星间隔缩至 1/4
     const meteorFrom = new THREE.Vector3(), meteorDir = new THREE.Vector3();
 
     const starVert = `
@@ -66,7 +67,7 @@
       if (meteorT < 0) {
         meteor.visible = false;
         meteorNext -= dt;
-        if (meteorNext <= 0 && quality > 0) { spawnMeteor(); meteorNext = 30 + Math.random() * 60; }
+        if (meteorNext <= 0 && quality > 0) { spawnMeteor(); meteorNext = (30 + Math.random() * 60) * (showerMode ? 0.25 : 1); }
         return;
       }
       meteor.visible = true;
@@ -90,9 +91,11 @@
         updateMeteor(dt, quality);
       },
       spawnMeteor,
-      boost(quality) {   // 到点流星雨：星野瞬时增亮后回落 + 三颗流星错峰齐落
+      shower(on) { showerMode = !!on; },
+      boost(quality, count) {   // 到点流星雨：星野瞬时增亮后回落 + 流星错峰齐落（峰值夜 3→5，v1.38.0）
         if (starMat) starMat.uniforms.uBoost.value = 2.2;
-        for (let i = 0; i < 3; i++) setTimeout(() => { if (quality > 0 && meteor) spawnMeteor(); }, 120 + i * 200);
+        const n = Math.max(1, Math.min(8, count || 3));
+        for (let i = 0; i < n; i++) setTimeout(() => { if (quality > 0 && meteor) spawnMeteor(); }, 120 + i * 200);
       },
       hasStars() { return !!stars && stars.visible; },
       hasMeteor() { return !!meteor; },

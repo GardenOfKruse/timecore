@@ -23,10 +23,12 @@
     const moon = /moonage=([0-9.]+)/.exec(location.search);
     const doy = /dayofyear=(\d+)/.exec(location.search);
     const term = /term=(\d{1,2})/.exec(location.search);
+    const shower = /shower=([01])/.exec(location.search);
     return {
       moonage: moon ? parseFloat(moon[1]) : null,
       dayofyear: doy ? parseInt(doy[1], 10) : null,
-      term: term ? ((parseInt(term[1], 10) % 24) + 24) % 24 : null
+      term: term ? ((parseInt(term[1], 10) % 24) + 24) % 24 : null,
+      shower: shower ? shower[1] === '1' : null
     };
   })();
   let hiddenFrames = 0, lastFrameInfo = null;   // 钟面形态跳帧计数 / 最近一次真实渲染的统计（探针用）
@@ -39,6 +41,16 @@
     termWarmAt = e;
     try { termWarm = TimeCoreDomain.solarTermWarmth(TimeCoreDomain.solarTermInfo(e).index); } catch (_) { termWarm = 0; }
     return termWarm;
+  }
+  let showerNight = null, showerAt = -1;   // 流星雨之夜（v1.38.0）：峰值夜随机流星间隔 1/4 + 到点 5 颗；?shower= 覆盖
+  function showerOf(e) {
+    if (URL_FLAGS.shower != null) showerNight = URL_FLAGS.shower ? (TimeCoreDomain.METEOR_SHOWERS[1]) : null;
+    else if (e - showerAt >= 600000 || showerAt < 0) {
+      showerAt = e;
+      try { showerNight = TimeCoreDomain.meteorShowerTonight(e); } catch (_) { showerNight = null; }
+    }
+    if (sky) sky.shower(!!showerNight);
+    return showerNight;
   }
   let sunFmt = null, sunFmtTz = '';
   const sunCache = { k: -1, h: 12 };
@@ -449,8 +461,8 @@
     TC.bus.on('cd:zero', () => {
       const fx = (window.TC && TC.fx) ? TC.fx.zero : 2;
       flashT = 0;
-      // 到点流星雨：星野瞬时增亮后回落 + 三颗流星错峰齐落（与到点音景合成完整仪式）
-      sky.boost(quality);
+      // 到点流星雨：星野瞬时增亮后回落 + 流星错峰齐落（与到点音景合成完整仪式）；峰值夜 3→5（v1.38.0）
+      sky.boost(quality, showerOf(Date.now()) ? 5 : 3);
       if (fx > 0) {
         spawnShock(2.1, new THREE.Color(0xffffff), 1.0, true);
         if (fx >= 2) spawnShock(1.6, new THREE.Color(0xffc46b), 0.8, true);
@@ -586,6 +598,7 @@
     updateYearRing(ctx.epoch);  // 年度进度环随日环同速流动
     updateHourPulse(ctx.epoch);   // 整点深呼吸（布防时让位）
     if (document.body.classList.contains('idle')) cameraMotion.drag(dt * 5.5, 0);   // 闲置时相机极缓自转（~0.05 rad/s）
+    showerOf(ctx.epoch);   // 流星雨之夜状态刷新（10 分钟缓存，cheap）
     sky.tick(dt, t, quality);
 
     // 能量环
@@ -731,6 +744,7 @@
         yearFrac: scene.userData.yearFrac != null ? Math.round(scene.userData.yearFrac * 100000) / 100000 : null,
         declDeg: scene.userData.declDeg != null ? Math.round(scene.userData.declDeg * 100) / 100 : null,
         termWarm: Math.round(termWarmOf(Date.now()) * 1000) / 1000,
+        shower: showerOf(Date.now()) ? showerOf(Date.now()).name : null,
         hourPulses: hourPulseCount,
         keyColor: k.color.getHexString()
       } : null;

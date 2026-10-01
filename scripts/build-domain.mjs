@@ -46,6 +46,7 @@ const MODULES = [
   ['js/generated/year-progress.js', ['src/domain/scene/year-progress.ts']],
   ['js/generated/solar-declination.js', ['src/domain/scene/solar-declination.ts']],
   ['js/generated/solar-term.js', ['src/domain/scene/solar-term.ts']],
+  ['js/generated/meteor-calendar.js', ['src/domain/scene/meteor-calendar.ts']],
   ['js/generated/daypart-theme.js', ['src/domain/audio/daypart-theme.ts']],
   ['js/generated/sound-pack.js', ['src/domain/audio/sound-pack.ts']],
   ['js/generated/electron-bridge.js', ['src/adapters/electron/electron-bridge.ts']],
