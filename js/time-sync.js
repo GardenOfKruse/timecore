@@ -32,6 +32,11 @@
       return clock.epochAt(performance.now());
     },
 
+    // 今日节气（v1.36.0）：可传 epoch 覆盖（探针/测试用）
+    term(at) {
+      return TimeCoreDomain.solarTermInfo(at == null ? this.epoch() : at);
+    },
+
     // 平滑推进 offset → targetOffset（rAF 与看门狗都会调用）
     // 用内部实测的真实流逝时间统一限速：回退方向吸收 ≤0.85×真实时间，显示永不倒退；正向追赶最快 8×
     tick() {

@@ -331,6 +331,24 @@ check('连点表达力：每秒×秒字段+速度档换算+长按类型',
   rateT.holdInfo.hasHold && rateT.holdInfo.holdSec === '0.8' &&
   rateT.holdInfo.derive.includes('3 次') && rateT.holdInfo.derive.includes('不含按压'), rateT);
 
+// R3: 节气轮转——域探针锚定 + 抽屉被动行（v1.36）
+const termT = JSON.parse(await js(`(async () => {
+  const line = document.getElementById('cd-term');
+  const probe = TC.time.term(Date.parse('2025-10-05T12:00:00+08:00'));
+  const nameAt = cst => TC.time.term(Date.parse(cst)).name;
+  return JSON.stringify({
+    line: line ? line.textContent : null,
+    now: TC.time.term().name,
+    probe: { name: probe.name, next: probe.nextName, days: probe.daysToNext },
+    qf25: nameAt('2025-03-21T12:00:00+08:00'),
+    dz25: nameAt('2025-12-25T12:00:00+08:00')
+  });
+})()`));
+check('节气轮转：探针锚定+抽屉行+当前节气',
+  termT.line && termT.line.includes('·') && (termT.line.includes('距 ') || termT.line.includes('今日 ')) &&
+  termT.probe.name === '秋分' && termT.probe.next === '寒露' && termT.probe.days === 3 &&
+  termT.qf25 === '春分' && termT.dz25 === '冬至', termT);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

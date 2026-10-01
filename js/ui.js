@@ -63,6 +63,22 @@
     const keys = Object.keys(sum.days).sort().slice(-7);
     box.title = '每日到点统计（本地保存 30 天）\n近 7 日：' + keys.map(k => k.slice(5) + ' ' + sum.days[k].count + ' 次').join('，');
   }
+  // 今日节气被动行（v1.36.0）：零按钮，日历日差按东八区；10 分钟刷新覆盖跨日
+  function renderTerm() {
+    const box = document.getElementById('cd-term');
+    if (!box) return;
+    try {
+      const info = TimeCoreDomain.solarTermInfo(TC.time.epoch());
+      box.textContent = info.name + ' · ' + (info.daysToNext <= 0 ? '今日 ' + info.nextName : '距 ' + info.nextName + ' ' + info.daysToNext + ' 日');
+      const year = new Date(TC.time.epoch()).getFullYear();
+      const lines = TimeCoreDomain.solarTermsOfYear(year).map(t => {
+        const d = new Date(t.epoch + 8 * 3600000);
+        return t.name + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
+      });
+      box.title = '二十四节气（东八区）\n' + lines.join(' · ');
+    } catch (_) {}
+  }
+
   // 统计导出 CSV（v1.23.0）：CSV 生成在域模块，这里只负责触发下载
   function downloadCsv(name, csv) {
     const a = document.createElement('a');
@@ -794,6 +810,8 @@
       }
       el.mute.classList.toggle('active', TC.Audio.muted);
       renderSync();
+      renderTerm();
+      setInterval(renderTerm, 600000);
       TC.bus.emit('boot');
     },
     renderCd, renderSync, toast,
