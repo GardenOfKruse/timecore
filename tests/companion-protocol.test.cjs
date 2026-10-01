@@ -35,5 +35,9 @@ const { createCompanionProtocol } = globalThis.TimeCoreDomain;
   const nested = p.projectState({ armed: true, nested: { deep: 1 }, arr: [1] });
   ok(nested.armed === true && !('nested' in nested) && !('arr' in nested));
 
+  // culture（v1.41.0）：字符串字段放行、对象字段仍拒绝
+  const cul = p.projectState({ culture: '秋分 · 子时夜半', bad: { deep: 1 } });
+  ok(cul.culture === '秋分 · 子时夜半' && !('bad' in cul));
+
   console.log(`companion-protocol contract: ${n} assertions passed`);
 })();

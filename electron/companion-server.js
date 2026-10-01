@@ -21,6 +21,7 @@ const PAGE = `<!DOCTYPE html>
   <div class="phase" id="ph">待机</div>
   <div class="rem" id="rem">--:--.---</div>
   <div class="clock" id="ck">--:--:--</div>
+  <div class="meta" id="cul">—</div>
   <div class="meta">TIMECORE 伴侣 · 只读镜像 · 供局域网设备查看</div>
 </div><script>
 const PH = { IDLE:'待机', NORMAL:'运行', WARMUP:'预热', SURGE:'增强', PULSE:'脉冲', ZERO:'释放' };
@@ -31,6 +32,8 @@ es.onerror = () => { document.getElementById('ph').textContent = '重连中…';
 fetch('/state').then(r => r.json()).then(render).catch(() => {});
 function render(s) {
   if (!s || typeof s.remainingMs !== 'number') return;
+  const cul = document.getElementById('cul');
+  if (cul) cul.textContent = s.culture || '—';
   const neg = s.remainingMs < 0 ? '-' : '';
   const m = Math.floor(Math.abs(s.remainingMs) / 60000), sec = Math.floor(Math.abs(s.remainingMs) / 1000) % 60;
   const ms = Math.floor(Math.abs(s.remainingMs) % 1000);

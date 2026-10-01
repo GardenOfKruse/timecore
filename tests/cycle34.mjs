@@ -119,10 +119,12 @@ await sleep(700);
 const d2 = JSON.parse((await get(`http://127.0.0.1:${COMP_BASE}/state`)).body);
 check('/state 实时递减 + 布防态', d1.armed === true && d1.remainingMs > d2.remainingMs && d2.remainingMs > 0, { d1: d1.remainingMs, d2: d2.remainingMs });
 
-// E: /state 白名单投影（无 adb/cfg/统计等键）
-const ALLOWED = new Set(['armed', 'phase', 'remainingMs', 'target', 'periodMs', 'cycleIndex', 'cycles', 'infinite', 'fired', 'hasNext', 'epoch']);
+// E: /state 白名单投影（无 adb/cfg/统计等键；culture 是 v1.41.0 新增白名单字段）
+const ALLOWED = new Set(['armed', 'phase', 'remainingMs', 'target', 'periodMs', 'cycleIndex', 'cycles', 'infinite', 'fired', 'hasNext', 'epoch', 'culture']);
 const leaked = Object.keys(d2).filter(k => !ALLOWED.has(k));
 check('/state 白名单投影零泄漏', leaked.length === 0, leaked);
+check('伴侣页文化行：节气·时辰·诗句随 state 推送',
+  typeof d2.culture === 'string' && d2.culture.length >= 5 && d2.culture.indexOf(' · ') > 0, { culture: d2.culture });
 
 // F: SSE 流至少收到 1 帧
 const frames = await readSse(`http://127.0.0.1:${COMP_BASE}/events`, 2, 4000);

@@ -90,6 +90,7 @@
       txt += ' · 距' + s.nextBranch + '时 ' + s.minutesToNext + ' 分';
       box.textContent = txt;
       box.title = '十二时辰（子时 23:00 起）\n' + TimeCoreDomain.SHICHEN_BRANCHES.map((b, i) => b + '时 ' + TimeCoreDomain.SHICHEN_ALIASES[i]).join(' · ');
+      refreshCulture();
     } catch (_) {}
   }
 
@@ -127,6 +128,17 @@
       setTimeout(() => { box.hidden = true; }, 8000);
       return verse.text;
     } catch (_) { return null; }
+  }
+
+  // 伴侣页文化行（v1.41.0）：节气 · 时辰 · 诗句 一行字符串，30 秒随 renderShichen 刷新
+  let companionCulture = '';
+  function refreshCulture() {
+    try {
+      const term = TimeCoreDomain.solarTermInfo(TC.time.epoch());
+      const sh = TimeCoreDomain.shichenInfo(TC.time.epoch());
+      const verse = TimeCoreDomain.daypartVerse(TC.time.epoch());
+      companionCulture = term.name + ' · ' + sh.branch + '时 ' + sh.alias + (sh.geng ? ' · ' + sh.geng : '') + ' · ' + verse.text;
+    } catch (_) { companionCulture = ''; }
   }
 
   // 统计导出 CSV（v1.23.0）：CSV 生成在域模块，这里只负责触发下载
@@ -723,6 +735,7 @@
       if (!window.electronAPI) return;
       const info = TC.Countdown.info();
       info.epoch = TC.time.epoch();
+      info.culture = companionCulture;
       window.electronAPI.companion('push-state', info);
     }
     ['cd:start', 'cd:stop', 'cd:zero', 'cd:advance', 'cd:done', 'phase'].forEach(ev => TC.bus.on(ev, pushCompanion));
@@ -865,6 +878,7 @@
       renderShichen();
       setInterval(renderShichen, 30000);
       setInterval(verseNotice, 300000);   // 时间之诗：每 5 分钟查一次换幕（每幕至多提示一次）
+      refreshCulture();
       showerNotice();
       TC.bus.emit('boot');
     },

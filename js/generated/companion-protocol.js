@@ -4,7 +4,7 @@ var TimeCoreDomain;
     // 局域网伴侣页协议（v1.30.0）：渲染端→主进程的命令路由 + 状态白名单投影。
     // 快照必须经 projectState 投影——ADB 配置、击拍统计等一切白名单外字段不出门。
     const STATE_FIELDS = [
-        'armed', 'phase', 'remainingMs', 'target', 'periodMs', 'cycleIndex', 'cycles', 'infinite', 'fired', 'hasNext', 'epoch'
+        'armed', 'phase', 'remainingMs', 'target', 'periodMs', 'cycleIndex', 'cycles', 'infinite', 'fired', 'hasNext', 'epoch', 'culture'
     ];
     const COMMANDS = new Set(['set-enabled', 'push-state']);
     function createCompanionProtocol() {
