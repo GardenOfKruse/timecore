@@ -42,6 +42,11 @@
       return TimeCoreDomain.shichenInfo(at == null ? this.epoch() : at);
     },
 
+    // 当前幕诗句（v1.40.0）：可传 epoch 覆盖（探针/测试用）
+    verse(at) {
+      return TimeCoreDomain.daypartVerse(at == null ? this.epoch() : at);
+    },
+
     // 平滑推进 offset → targetOffset（rAF 与看门狗都会调用）
     // 用内部实测的真实流逝时间统一限速：回退方向吸收 ≤0.85×真实时间，显示永不倒退；正向追赶最快 8×
     tick() {

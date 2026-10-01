@@ -392,6 +392,26 @@ check('十二时辰：探针锚定+抽屉行',
   shT.you.b === '酉' && shT.you.a === '日入' && shT.you.g === null && shT.you.m === 120 &&
   shT.line && shT.line.indexOf('时') > 0 && shT.line.indexOf('距') > 0, shT);
 
+// R7: 时间之诗——探针稳定伪随机 + 换幕一次性提示（v1.40）
+const verseT = JSON.parse(await js(`(async () => {
+  const v1 = TC.time.verse(Date.parse('2026-10-02T06:00:00'));
+  const v2 = TC.time.verse(Date.parse('2026-10-02T10:00:00'));
+  const vNight = TC.time.verse(Date.parse('2026-10-02T01:00:00'));
+  localStorage.removeItem('tc.shower.v1');
+  document.getElementById('gap-note').hidden = true;
+  localStorage.setItem('tc.verse.v1', 'x');
+  const shown = TC.UI.verseNotice(Date.parse('2026-10-02T06:00:00'));
+  const line = document.getElementById('gap-note').textContent;
+  const again = TC.UI.verseNotice(Date.parse('2026-10-02T06:30:00'));
+  const busy = (() => { document.getElementById('gap-note').hidden = false; localStorage.removeItem('tc.verse.v1'); const r = TC.UI.verseNotice(Date.parse('2026-10-03T06:00:00')); document.getElementById('gap-note').hidden = true; return r; })();
+  localStorage.removeItem('tc.verse.v1');
+  return JSON.stringify({ m: v1.daypart, same: v1.text === v2.text, n: vNight.daypart, shown, line, again, busy });
+})()`));
+check('时间之诗：探针稳定+换幕一次性提示',
+  verseT.m === 'morning' && verseT.same === true && verseT.n === 'night' &&
+  verseT.shown !== null && verseT.line.indexOf('——') > 0 && verseT.again === null &&
+  verseT.busy === null, verseT);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

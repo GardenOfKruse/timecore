@@ -101,13 +101,31 @@
       if (!shower) return null;
       const day = new Date(now + 8 * 3600000).toISOString().slice(0, 10);
       if (localStorage.getItem('tc.shower.v1') === day) return null;
-      localStorage.setItem('tc.shower.v1', day);
       const box = document.getElementById('gap-note');
-      if (!box || !box.hidden) return null;   // 时间裂缝行优先
+      if (!box || !box.hidden) return null;   // 通道被占（如时间裂缝行）不记账，稍后还有机会
+      localStorage.setItem('tc.shower.v1', day);
       box.hidden = false;
       box.textContent = '今夜 ' + shower.name + ' · 流星更密';
       setTimeout(() => { box.hidden = true; }, 10000);
       return shower.name;
+    } catch (_) { return null; }
+  }
+
+  // 时间之诗（v1.40.0）：换幕时裂缝通道淡入一句诗，8 秒自灭；每幕至多一次（tc.verse.v1 存「日期-幕」）
+  function verseNotice(at) {
+    try {
+      const now = at == null ? TC.time.epoch() : at;
+      const verse = TimeCoreDomain.daypartVerse(now);
+      const d = new Date(now);
+      const key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '-' + verse.daypart;
+      if (localStorage.getItem('tc.verse.v1') === key) return null;
+      const box = document.getElementById('gap-note');
+      if (!box || !box.hidden) return null;   // 通道被占（时间裂缝/流星雨优先）不记账，5 分钟后再试
+      localStorage.setItem('tc.verse.v1', key);
+      box.hidden = false;
+      box.textContent = verse.text + ' —— ' + verse.source;
+      setTimeout(() => { box.hidden = true; }, 8000);
+      return verse.text;
     } catch (_) { return null; }
   }
 
@@ -846,12 +864,14 @@
       setInterval(renderTerm, 600000);
       renderShichen();
       setInterval(renderShichen, 30000);
+      setInterval(verseNotice, 300000);   // 时间之诗：每 5 分钟查一次换幕（每幕至多提示一次）
       showerNotice();
       TC.bus.emit('boot');
     },
     renderCd, renderSync, toast,
-    // 流星雨之夜（v1.38.0）测试钩子：可锚定峰值夜日期验证一次性提示
+    // 流星雨之夜（v1.38.0）/时间之诗（v1.40.0）测试钩子：可锚定日期验证一次性提示
     showerNotice,
+    verseNotice,
     // 倒计时数字心跳探针（v1.24.0）
     debugCdTick() { return { mm: el.rmm.textContent, ss: el.rss.textContent, ms: el.rms.textContent, ticks: cdTickN }; },
     debugGap(prev, now) { return TimeCoreDomain.evaluateGap(prev, now); },
