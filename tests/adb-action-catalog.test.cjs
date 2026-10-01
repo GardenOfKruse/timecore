@@ -19,15 +19,20 @@ assert.equal(catalog.list(), catalog.list());
 
 const tap = catalog.add('tap');
 assert.equal(tap.type, 'tap');
-assert.equal(tap.n, 5);
-assert.equal(tap.gap, 400);
+assert.equal(tap.n, 10);
+assert.equal(tap.gap, 200);
+const hold = catalog.add('hold');
+assert.equal(hold.type, 'hold');
+assert.equal(hold.n, 3);
+assert.equal(hold.gap, 500);
+assert.equal(hold.holdMs, 800);
 const wake = catalog.add('wake');
 assert.equal(wake.type, 'wake');
 assert.equal(wake.n, 3);
 const script = catalog.add('unknown');
 assert.equal(script.type, 'adv');
 assert.equal(script.script, 'input tap {X} {Y}');
-assert.equal(catalog.list().length, 5);
+assert.equal(catalog.list().length, 6);
 
 assert.equal(catalog.removeDevice('phone-1'), true);
 assert.deepEqual(catalog.list().find(action => action.id === 'ref').devs, []);
@@ -50,4 +55,4 @@ assert.equal(replaced.length, 1);
 assert.equal(catalog.list()[0].id, 'next');
 assert.equal(catalog.resetToSeed()[0].on, false);
 
-console.log('adb-action-catalog contract: 28 assertions passed');
+console.log('adb-action-catalog contract: 33 assertions passed');

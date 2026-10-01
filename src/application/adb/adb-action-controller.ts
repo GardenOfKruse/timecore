@@ -5,7 +5,7 @@ export interface AdbActionControllerAction {
   [key: string]: unknown;
 }
 
-export type AdbActionControllerField = 'name' | 'enabled' | 'lead' | 'offset' | 'script' | 'x' | 'y' | 'count' | 'gap';
+export type AdbActionControllerField = 'name' | 'enabled' | 'lead' | 'offset' | 'script' | 'x' | 'y' | 'count' | 'gap' | 'hold';
 
 export type AdbActionControllerEvent =
   | { kind: 'field'; action: AdbActionControllerAction; field: AdbActionControllerField; value: string | boolean }
@@ -42,6 +42,7 @@ function updateField(action: AdbActionControllerAction, field: AdbActionControll
   else if (field === 'y') action.y = value === '' ? '' : +value;
   else if (field === 'count') action.n = +value || 5;
   else if (field === 'gap') action.gap = +value || 400;
+  else if (field === 'hold') action.holdMs = Math.min(10000, Math.max(100, Math.round((+value || 0.8) * 1000)));
 }
 
 export function createAdbActionController(options: AdbActionControllerOptions): AdbActionController {

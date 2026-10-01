@@ -20,6 +20,8 @@ var TimeCoreDomain;
             action.n = +value || 5;
         else if (field === 'gap')
             action.gap = +value || 400;
+        else if (field === 'hold')
+            action.holdMs = Math.min(10000, Math.max(100, Math.round((+value || 0.8) * 1000)));
     }
     function createAdbActionController(options) {
         function handle(event) {

@@ -30,6 +30,7 @@ const MODULES = [
   ['js/generated/adb-screenshot-controller.js', ['src/application/adb/adb-screenshot-controller.ts']],
   ['js/generated/adb-screenshot-picker-view.js', ['src/adapters/browser/adb-screenshot-picker-view.ts']],
   ['js/generated/adb-script-builder.js', ['src/domain/adb/adb-script-builder.ts']],
+  ['js/generated/tap-rate.js', ['src/domain/adb/tap-rate.ts']],
   ['js/generated/audio-schedule-coordinator.js', ['src/application/audio/audio-schedule-coordinator.ts']],
   ['js/generated/audio-output.js', ['src/adapters/browser/audio-output.ts']],
   ['js/generated/audio-schedule-planner.js', ['src/domain/audio/audio-schedule-planner.ts']],

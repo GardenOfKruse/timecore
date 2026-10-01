@@ -294,6 +294,43 @@ await js(`TC.Countdown.stop()`);
 const fs1 = await js(`document.getElementById('cd-stats').textContent`);
 check('每日到点统计：真实到点后计数变化', firedOk === true && /今日到点 \d+/.test(fs1), { before: fs0, after: fs1 });
 
+// R2: 连点表达力——「每秒×秒」字段 + 速度档换算 + 长按类型（v1.35）
+const rateT = JSON.parse(await js(`(async () => {
+  const sel = document.getElementById('adb-add-type');
+  const opts = [...sel.options].map(o => o.value);
+  sel.value = 'tap';
+  document.getElementById('adb-add').click();
+  await new Promise(r2 => setTimeout(r2, 250));
+  let cards = [...document.querySelectorAll('#adb-actions .adb-action')];
+  const tapCard = cards[cards.length - 1];
+  const chips = tapCard.querySelectorAll('.a-ratechip').length;
+  tapCard.querySelectorAll('.a-ratechip')[2].click();
+  await new Promise(r2 => setTimeout(r2, 200));
+  const tapInfo = {
+    rate: tapCard.querySelector('.a-rate').value,
+    sec: tapCard.querySelector('.a-sec').value,
+    derive: tapCard.querySelector('.a-derive').textContent,
+    chips
+  };
+  sel.value = 'hold';
+  document.getElementById('adb-add').click();
+  await new Promise(r2 => setTimeout(r2, 250));
+  cards = [...document.querySelectorAll('#adb-actions .adb-action')];
+  const holdCard = cards[cards.length - 1];
+  const holdInfo = {
+    hasHold: !!holdCard.querySelector('.a-hold'),
+    holdSec: holdCard.querySelector('.a-hold') ? holdCard.querySelector('.a-hold').value : '',
+    derive: holdCard.querySelector('.a-derive') ? holdCard.querySelector('.a-derive').textContent : ''
+  };
+  return JSON.stringify({ opts, tapInfo, holdInfo });
+})()`));
+check('连点表达力：每秒×秒字段+速度档换算+长按类型',
+  rateT.opts.includes('hold') && rateT.tapInfo.chips >= 4 &&
+  rateT.tapInfo.rate === '6' && rateT.tapInfo.sec === '2' &&
+  rateT.tapInfo.derive.includes('12 次') && rateT.tapInfo.derive.includes('167ms') &&
+  rateT.holdInfo.hasHold && rateT.holdInfo.holdSec === '0.8' &&
+  rateT.holdInfo.derive.includes('3 次') && rateT.holdInfo.derive.includes('不含按压'), rateT);
+
 await js(`electronAPI.send('close')`).catch(() => {});
 const okN = results.filter(Boolean).length;
 console.log(`\n==== 循环#33 真实月相：${okN}/${results.length} 通过 ====`);

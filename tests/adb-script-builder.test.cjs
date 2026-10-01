@@ -49,9 +49,32 @@ const wake = builder.build({ type: 'wake', x: 20, y: 30, n: 2, gap: 100 }, { ser
 assert.match(wake, /^input keyevent 224; sleep 0\.6; input swipe 540 1685 540 702 300; sleep 1; /);
 assert.match(wake, /input tap 20 30/);
 
+// 长按：同点 input swipe X Y X Y holdMs；默认 800ms，钳制 [100,10000]
+assert.equal(
+  builder.build({ type: 'hold', x: 15, y: 25, n: 1 }, { serial: 'usb-1', W: 1080, H: 2340 }),
+  'input swipe 15 25 15 25 800'
+);
+assert.equal(
+  builder.build({ type: 'hold', x: 15, y: 25, n: 2, gap: 500, holdMs: 1500 }, { serial: 'usb-1', W: 1080, H: 2340 }),
+  'for i in $(seq 1 2); do input swipe 15 25 15 25 1500; if [ $i -lt 2 ]; then sleep 0.500; fi; done'
+);
+assert.match(
+  builder.build({ type: 'hold', x: 1, y: 2, n: 2, gap: 100, holdMs: 99999 }, { serial: 'usb-1', W: 1080, H: 2340 }),
+  /input swipe 1 2 1 2 10000/, '按压钳到上限 10s'
+);
+assert.match(
+  builder.build({ type: 'hold', x: 1, y: 2, n: 2, gap: 100, holdMs: 5 }, { serial: 'usb-1', W: 1080, H: 2340 }),
+  /input swipe 1 2 1 2 100/, '按压钳到下限 100ms'
+);
+// 既有边界修复：wake n=1 也必须带亮屏前缀（旧实现提前 return 跳过亮屏）
+assert.match(
+  builder.build({ type: 'wake', x: 20, y: 30, n: 1 }, { serial: 'usb-1', W: 1080, H: 2340 }),
+  /^input keyevent 224;.*input tap 20 30$/, '亮屏+单次点按'
+);
+
 assert.equal(
   builder.build({ type: 'adv', script: 'input tap {X} {Y}; echo {serial} {W}x{H}', x: 100, y: 200, shotW: 1080, shotH: 2340 }, device),
   'input tap 200 400; echo usb-1 2160x4680'
 );
 
-console.log('adb-script-builder contract: 17 assertions passed');
+console.log('adb-script-builder contract: 24 assertions passed');

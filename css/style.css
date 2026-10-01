@@ -375,6 +375,9 @@ body.electron .clock-panel, body.electron .ctrl-panel { top: 40px; }
 .adb-action .a-devices { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 5px; align-items: center; }
 .a-devchip { font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--stroke); cursor: pointer; color: var(--dim); }
 .a-devchip.on { color: var(--accent); border-color: rgba(57, 215, 255, 0.5); background: rgba(57, 215, 255, 0.12); }
+.a-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+.a-ratechip { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--stroke); cursor: pointer; color: var(--dim); }
+.a-ratechip:hover { color: var(--accent); border-color: rgba(57, 215, 255, 0.45); background: rgba(57, 215, 255, 0.08); }
 #adb-log {
   margin-top: 10px; border-top: 1px solid var(--stroke); padding-top: 8px;
   font: 10px/1.7 Consolas, monospace; color: var(--dim); max-height: 150px; overflow: auto; white-space: pre-wrap;

@@ -25,7 +25,7 @@ function cloneAction(action: AdbAction): AdbAction {
 }
 
 function normalizeType(type: string): string {
-  return type === 'tap' || type === 'wake' || type === 'adv' ? type : 'adv';
+  return type === 'tap' || type === 'hold' || type === 'wake' || type === 'adv' ? type : 'adv';
 }
 
 function normalizeAction(value: unknown, idFactory: (kind: string) => string): AdbAction | null {
@@ -72,7 +72,8 @@ export function createAdbActionCatalog(raw: unknown = [], options: AdbActionCata
       on: true,
       type: normalizeType(type)
     };
-    if (base.type === 'tap') Object.assign(base, { name: '连点', x: '', y: '', n: 5, gap: 400 });
+    if (base.type === 'tap') Object.assign(base, { name: '连点', x: '', y: '', n: 10, gap: 200 });
+    else if (base.type === 'hold') Object.assign(base, { name: '长按', x: '', y: '', n: 3, gap: 500, holdMs: 800 });
     else if (base.type === 'wake') Object.assign(base, { name: '亮屏连点', x: '', y: '', n: 3, gap: 500 });
     else Object.assign(base, { name: '自定义脚本', script: 'input tap {X} {Y}' });
     return base;
@@ -91,8 +92,8 @@ export function createAdbActionCatalog(raw: unknown = [], options: AdbActionCata
       name: '连点示例 · 右下 (864,2280)',
       x: 864,
       y: 2280,
-      n: 5,
-      gap: 400,
+      n: 6,
+      gap: 500,
       lead: '',
       devs: [],
       on: false

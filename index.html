@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>TIMECORE · 悬浮时间核心</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%2339d7ff' stroke-width='8'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=157">
+<link rel="stylesheet" href="css/style.css?v=158">
 </head>
 <body>
 <canvas id="scene"></canvas>
@@ -137,6 +137,7 @@
     <div class="row adb-gate">
       <select id="adb-add-type" title="动作类型（默认连点）">
         <option value="tap">连点</option>
+        <option value="hold">长按</option>
         <option value="wake">亮屏连点</option>
         <option value="adv">高级脚本</option>
       </select>
@@ -259,12 +260,13 @@
 <script src="js/generated/adb-device-view.js?v=1"></script>
 <script src="js/generated/adb-guide-view.js?v=1"></script>
 <script src="js/generated/adb-config-store.js?v=1"></script>
-<script src="js/generated/adb-action-catalog.js?v=1"></script>
-<script src="js/generated/adb-action-view.js?v=1"></script>
-<script src="js/generated/adb-action-controller.js?v=1"></script>
+<script src="js/generated/adb-action-catalog.js?v=2"></script>
+<script src="js/generated/tap-rate.js?v=1"></script>
+<script src="js/generated/adb-action-view.js?v=2"></script>
+<script src="js/generated/adb-action-controller.js?v=2"></script>
 <script src="js/generated/adb-screenshot-picker-view.js?v=1"></script>
 <script src="js/generated/adb-screenshot-controller.js?v=1"></script>
-<script src="js/generated/adb-script-builder.js?v=1"></script>
+<script src="js/generated/adb-script-builder.js?v=2"></script>
 <script src="js/generated/adb-executor.js?v=1"></script>
 <script src="js/generated/adb-fire-controller.js?v=1"></script>
 <script src="js/adb.js?v=169"></script>

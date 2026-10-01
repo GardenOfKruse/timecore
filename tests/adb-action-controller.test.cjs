@@ -50,13 +50,21 @@ const deepEqual = (actual, expected) => { assert.deepEqual(actual, expected); as
   equal(action.n, 5);
   controller.handle({ kind: 'field', action, field: 'gap', value: '' });
   equal(action.gap, 400);
-  equal(saves, 11);
+  controller.handle({ kind: 'field', action, field: 'hold', value: '' });
+  equal(action.holdMs, 800, '空值回退 0.8 秒');
+  controller.handle({ kind: 'field', action, field: 'hold', value: '1.5' });
+  equal(action.holdMs, 1500);
+  controller.handle({ kind: 'field', action, field: 'hold', value: '99' });
+  equal(action.holdMs, 10000, '按压上限 10 秒');
+  controller.handle({ kind: 'field', action, field: 'hold', value: '0.02' });
+  equal(action.holdMs, 100, '按压下限 100ms');
+  equal(saves, 15);
 
   controller.handle({ kind: 'device-toggle', action, serial: 'usb-1' });
   deepEqual(action.devs, ['usb-1']);
   controller.handle({ kind: 'device-toggle', action, serial: 'usb-1' });
   deepEqual(action.devs, []);
-  equal(saves, 13);
+  equal(saves, 17);
 
   controller.handle({ kind: 'fire', action });
   controller.handle({ kind: 'screenshot', action });
@@ -65,7 +73,7 @@ const deepEqual = (actual, expected) => { assert.deepEqual(actual, expected); as
 
   controller.handle({ kind: 'remove', action });
   deepEqual(calls.at(-1), ['remove', 'a-1']);
-  equal(saves, 14);
+  equal(saves, 18);
   equal(renders, 1);
 
   console.log('adb-action-controller contract: ' + assertions + ' assertions passed');

@@ -27,6 +27,9 @@ var TimeCoreDomain;
     function quoted(value) {
         return String(value || '').replace(/"/g, '');
     }
+    function tapRate() {
+        return TimeCoreDomain;
+    }
     function crossStyle(action) {
         const x = finite(action.x);
         const y = finite(action.y);
@@ -51,10 +54,22 @@ var TimeCoreDomain;
                 (offline ? '（离线）' : '') + '">' + quoted(device.name || device.serial.slice(-4)) + '</span>';
         }).join('');
     }
+    function rateChipsHTML() {
+        const presets = tapRate().TAP_RATE_PRESETS || [];
+        return presets.map(preset => '<span class="a-ratechip" data-rate="' + preset.rate + '" title="点击填入每秒次数">' + preset.label + '</span>').join('');
+    }
+    function deriveText(action) {
+        const n = Math.round(Number(action.n) || 0);
+        const gap = Math.round(Number(action.gap) || 0);
+        if (n <= 0 || gap <= 0)
+            return '';
+        return '≈ ' + n + ' 次 · 间隔 ' + gap + 'ms' + (action.type === 'hold' ? '（不含按压）' : '');
+    }
     function cardBody(action, isAdvanced) {
         if (isAdvanced) {
             return '<textarea class="a-script" rows="3" spellcheck="false" placeholder="设备端 shell 脚本，支持 {serial} {W} {H} {X} {Y}"></textarea>';
         }
+        const isHold = action.type === 'hold';
         return '<div class="a-pick">' +
             '<div class="a-shot">' +
             (typeof action._shot === 'string' && action._shot.length > 0
@@ -65,8 +80,13 @@ var TimeCoreDomain;
             '<button class="a-shotbtn">' + (action._shot ? '📸 重新截屏' : '📸 截屏选点') + '</button>' +
             '<div class="a-field"><span class="a-lab">X 坐标</span><input type="number" class="a-x"></div>' +
             '<div class="a-field"><span class="a-lab">Y 坐标</span><input type="number" class="a-y"></div>' +
-            '<div class="a-field"><span class="a-lab">次数</span><input type="number" class="a-n" min="1" max="200"></div>' +
-            '<div class="a-field"><span class="a-lab">间隔 ms</span><input type="number" class="a-gap" min="50"></div>' +
+            '<div class="a-field"><span class="a-lab">每秒</span><input type="number" class="a-rate" min="0.5" max="20" step="0.5"><span class="dim small">次</span></div>' +
+            '<div class="a-field"><span class="a-lab">时长</span><input type="number" class="a-sec" min="0.5" max="120" step="0.5"><span class="dim small">秒</span></div>' +
+            (isHold
+                ? '<div class="a-field"><span class="a-lab">单次按压</span><input type="number" class="a-hold" min="0.1" max="10" step="0.1"><span class="dim small">秒</span></div>'
+                : '') +
+            '<div class="a-field"><span class="a-lab">速度档</span><span class="a-chips">' + rateChipsHTML() + '</span></div>' +
+            '<div class="dim small a-derive">' + deriveText(action) + '</div>' +
             (action.type === 'wake' ? '<div class="dim small">先亮屏+上滑解锁（需无密码锁屏）</div>' : '') +
             '</div>' +
             '</div>';
@@ -96,7 +116,7 @@ var TimeCoreDomain;
             const card = doc.createElement('div');
             card.className = 'adb-action';
             card.dataset.id = action.id;
-            const badge = { tap: '连点', wake: '亮屏连点', adv: '脚本' }[action.type] || '动作';
+            const badge = { tap: '连点', hold: '长按', wake: '亮屏连点', adv: '脚本' }[action.type] || '动作';
             const isAdvanced = action.type === 'adv';
             card.innerHTML =
                 '<div class="row"><span class="a-badge">' + badge + '</span><input class="a-name" value="' + quoted(action.name) + '" placeholder="动作名称">' +
@@ -133,12 +153,42 @@ var TimeCoreDomain;
                 setNumberValue(y, action.y);
                 x.addEventListener('input', event => emit({ kind: 'field', action, field: 'x', value: valueOf(event) }, card));
                 y.addEventListener('input', event => emit({ kind: 'field', action, field: 'y', value: valueOf(event) }, card));
-                const count = required(card.querySelector('.a-n'), '.a-n');
-                const gap = required(card.querySelector('.a-gap'), '.a-gap');
-                setNumberValue(count, action.n || 5);
-                setNumberValue(gap, action.gap || 400);
-                count.addEventListener('input', event => emit({ kind: 'field', action, field: 'count', value: valueOf(event) }, card));
-                gap.addEventListener('input', event => emit({ kind: 'field', action, field: 'gap', value: valueOf(event) }, card));
+                const rateInput = required(card.querySelector('.a-rate'), '.a-rate');
+                const secInput = required(card.querySelector('.a-sec'), '.a-sec');
+                const holdInput = card.querySelector('.a-hold');
+                const derive = card.querySelector('.a-derive');
+                const isHold = action.type === 'hold';
+                const storedHoldMs = Math.round(Number(action.holdMs) || 800);
+                const echo = tapRate().tapTimingToRate;
+                const shown = echo ? echo(action.n, action.gap, isHold ? storedHoldMs : undefined) : null;
+                rateInput.value = shown ? String(shown.rate) : '';
+                secInput.value = shown ? String(shown.seconds) : '';
+                if (holdInput)
+                    holdInput.value = String(storedHoldMs / 1000);
+                const applyRate = () => {
+                    const runtime = tapRate();
+                    const holdSec = holdInput ? Math.min(10, Math.max(0.1, Number(holdInput.value) || 0.8)) : 0;
+                    const timing = isHold
+                        ? (runtime.holdRateToTiming ? runtime.holdRateToTiming(rateInput.value, secInput.value, holdSec * 1000) : null)
+                        : (runtime.tapRateToTiming ? runtime.tapRateToTiming(rateInput.value, secInput.value) : null);
+                    if (!timing)
+                        return;
+                    emit({ kind: 'field', action, field: 'count', value: String(timing.n) }, card);
+                    emit({ kind: 'field', action, field: 'gap', value: String(timing.gap) }, card);
+                    if (derive)
+                        derive.textContent = deriveText(action);
+                };
+                rateInput.addEventListener('input', applyRate);
+                secInput.addEventListener('input', applyRate);
+                if (holdInput)
+                    holdInput.addEventListener('input', () => {
+                        emit({ kind: 'field', action, field: 'hold', value: holdInput.value }, card);
+                        applyRate();
+                    });
+                card.querySelectorAll('.a-ratechip').forEach(chip => chip.addEventListener('click', () => {
+                    rateInput.value = chip.dataset.rate || '';
+                    applyRate();
+                }));
                 const shot = required(card.querySelector('.a-shot'), '.a-shot');
                 const image = shot.querySelector('img');
                 (image || shot).addEventListener('click', () => emit({ kind: 'open-picker', action }, card));

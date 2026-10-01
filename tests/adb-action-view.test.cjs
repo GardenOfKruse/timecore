@@ -1,6 +1,10 @@
 const assert = require('node:assert/strict');
 
+require('../js/generated/tap-rate.js');
+const tapRateMembers = globalThis.TimeCoreDomain;
 require('../js/generated/adb-action-view.js');
+// node require 下每产物有独立闭包对象（浏览器 script 标签共享全局自动合并）；此处模拟浏览器的合并结果
+Object.assign(globalThis.TimeCoreDomain, tapRateMembers);
 const { createAdbActionView } = globalThis.TimeCoreDomain;
 
 class FakeNode {
@@ -17,7 +21,7 @@ class FakeNode {
     this._html = '';
   }
 
-  set innerHTML(value) {
+    set innerHTML(value) {
     this._html = String(value);
     this.children = [];
     const classes = [...this._html.matchAll(/class="([^"]+)"/g)];
@@ -30,6 +34,8 @@ class FakeNode {
       const textMatch = this._html.slice(match.index).match(/^[^>]*>([^<]*)</);
       if (textMatch) child.textContent = textMatch[1];
       child.checked = child.className.includes('a-on') && /class="[^"]*a-on[^"]*" checked/.test(this._html.slice(match.index));
+      const rateMatch = this._html.slice(match.index).match(/data-rate="([^"]*)"/);
+      if (rateMatch) child.dataset.rate = rateMatch[1];
       if (child.className.includes('a-devices')) {
         for (const chipMatch of this._html.slice(match.index).matchAll(/class="([^"]*a-devchip[^"]*)" data-serial="([^"]*)"/g)) {
           const chip = new FakeNode();
@@ -85,6 +91,7 @@ const documentPort = {
 };
 
 const tap = { id: 'tap-1', type: 'tap', name: '连点', devs: [], on: true, x: 10, y: 20, shotW: 100, shotH: 200, _shot: 'png', n: 5, gap: 400 };
+const hold = { id: 'hold-1', type: 'hold', name: '长按', devs: [], on: true, x: 30, y: 40, n: 3, gap: 500, holdMs: 800 };
 const script = { id: 'script-1', type: 'adv', name: '脚本', devs: ['usb-1'], on: false, script: 'input tap {X} {Y}' };
 const devices = [
   { serial: 'usb-1', name: '工作机', state: 'device' },
@@ -92,12 +99,15 @@ const devices = [
 ];
 const events = [];
 const view = createAdbActionView({ document: documentPort });
-view.render({ actions: [tap, script], devices }, {
+view.render({ actions: [tap, hold, script], devices }, {
   onEvent(event) {
     events.push(event);
     if (event.kind === 'field') {
       if (event.field === 'name') event.action.name = event.value;
       if (event.field === 'x') event.action.x = +event.value;
+      if (event.field === 'count') event.action.n = +event.value || 5;
+      if (event.field === 'gap') event.action.gap = +event.value || 400;
+      if (event.field === 'hold') event.action.holdMs = Math.min(10000, Math.max(100, Math.round((+event.value || 0.8) * 1000)));
     }
     if (event.kind === 'device-toggle') {
       event.action.devs = event.action.devs.includes(event.serial)
@@ -107,9 +117,10 @@ view.render({ actions: [tap, script], devices }, {
   }
 });
 
-assert.equal(actionsRoot.querySelectorAll('.adb-action').length, 2);
+assert.equal(actionsRoot.querySelectorAll('.adb-action').length, 3);
 const tapCard = actionsRoot.querySelectorAll('.adb-action')[0];
-const scriptCard = actionsRoot.querySelectorAll('.adb-action')[1];
+const holdCard = actionsRoot.querySelectorAll('.adb-action')[1];
+const scriptCard = actionsRoot.querySelectorAll('.adb-action')[2];
 assert.equal(tapCard.querySelector('.a-name').value, '连点');
 assert.equal(scriptCard.querySelector('.a-script').value, 'input tap {X} {Y}');
 assert.equal(tapCard.querySelectorAll('.a-devchip').length, 2);
@@ -117,6 +128,33 @@ assert.equal(tapCard.querySelector('.a-devcount').textContent, '全部启用设�
 assert.equal(tapCard.querySelector('.a-on').checked, true);
 assert.equal(scriptCard.querySelector('.a-on').checked, false);
 assert.equal(scriptCard.querySelectorAll('.a-devchip')[0].className.includes('on'), true);
+
+// 「每秒 × 时长」回显：存储 n5/gap400 → 每秒 2.5 次 × 2 秒
+assert.equal(tapCard.querySelector('.a-rate').value, '2.5');
+assert.equal(tapCard.querySelector('.a-sec').value, '2');
+assert.equal(holdCard.querySelector('.a-rate').value, '0.8', '长按周期=间隔+按压');
+assert.equal(holdCard.querySelector('.a-sec').value, '3.9');
+assert.equal(holdCard.querySelector('.a-hold').value, '0.8');
+
+// 改「每秒」→ 换算成次数+间隔两个字段事件 + 换算提示行（applyRate 读节点值，先赋值再 fire 模拟真实输入）
+tapCard.querySelector('.a-rate').value = '5';
+tapCard.querySelector('.a-rate').fire('input', '5');
+assert.deepEqual(events.slice(-2).map(event => event.field), ['count', 'gap']);
+assert.equal(tap.n, 10);
+assert.equal(tap.gap, 200);
+assert.equal(tapCard.querySelector('.a-derive').textContent, '≈ 10 次 · 间隔 200ms');
+
+// 速度档 chip：一键填每秒次数
+tapCard.querySelectorAll('.a-ratechip')[0].fire('click');
+assert.equal(tap.n, 2, '慢档每秒1次×2秒');
+assert.equal(tap.gap, 1000);
+
+// 长按：改按压时长 → hold 字段 + 间隔按周期重算（事件序：hold → count → gap）
+holdCard.querySelector('.a-hold').value = '1.5';
+holdCard.querySelector('.a-hold').fire('input', '1.5');
+assert.deepEqual(events.slice(-3).map(event => event.field), ['hold', 'count', 'gap']);
+assert.equal(hold.holdMs, 1500);
+assert.equal(hold.gap, 50, '1250ms 周期 − 1500ms 按压 → 下限 50ms');
 
 tapCard.querySelector('.a-name').fire('input', '新的连点');
 tapCard.querySelector('.a-x').fire('input', '44');
@@ -138,7 +176,7 @@ assert.deepEqual(events.slice(-3).map(event => event.kind), ['fire', 'screenshot
 scriptCard.querySelector('.a-del').fire('click');
 assert.equal(events.at(-1).kind, 'remove');
 view.refreshDevices({ actions: [tap], devices: [devices[0]] });
-assert.equal(actionsRoot.querySelectorAll('.adb-action').length, 2, 'View 不负责删除动作，删除由 Controller 重绘');
+assert.equal(actionsRoot.querySelectorAll('.adb-action').length, 3, 'View 不负责删除动作，删除由 Controller 重绘');
 assert.equal(actionsRoot.querySelectorAll('.adb-action')[0].querySelectorAll('.a-devchip').length, 1);
 
-console.log('adb-action-view contract: 18 assertions passed');
+console.log('adb-action-view contract: 36 assertions passed');

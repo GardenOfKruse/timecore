@@ -29,18 +29,25 @@ var TimeCoreDomain;
                 .replace(/\{Y\}/g, String(y));
         }
         const n = Math.max(1, Math.min(200, Number(action.n) || 5));
-        if (n <= 1)
-            return `input tap ${x} ${y}`;
+        const holdMs = Math.max(100, Math.min(10000, Math.round(Number(action.holdMs) || 800)));
         const transportMs = Number(device.TI);
         const compensate = options.compensate === true && transportMs > 30;
         const requestedGap = Number(action.gap) || 400;
         const gap = Math.max(50, requestedGap - (compensate ? transportMs : 0)) / 1000;
-        const loop = `for i in $(seq 1 ${n}); do input tap ${x} ${y}; if [ $i -lt ${n} ]; then sleep ${gap.toFixed(3)}; fi; done`;
+        const tapCmd = action.type === 'hold'
+            ? `input swipe ${x} ${y} ${x} ${y} ${holdMs}`
+            : `input tap ${x} ${y}`;
+        const loop = `for i in $(seq 1 ${n}); do ${tapCmd}; if [ $i -lt ${n} ]; then sleep ${gap.toFixed(3)}; fi; done`;
         if (action.type === 'wake') {
             const width = device.W || DEFAULT_WIDTH;
             const height = device.H || DEFAULT_HEIGHT;
-            return `input keyevent 224; sleep 0.6; input swipe ${Math.round(width / 2)} ${Math.round(height * 0.72)} ${Math.round(width / 2)} ${Math.round(height * 0.3)} 300; sleep 1; ` + loop;
+            const wakePrefix = `input keyevent 224; sleep 0.6; input swipe ${Math.round(width / 2)} ${Math.round(height * 0.72)} ${Math.round(width / 2)} ${Math.round(height * 0.3)} 300; sleep 1; `;
+            if (n <= 1)
+                return wakePrefix + tapCmd;
+            return wakePrefix + loop;
         }
+        if (n <= 1)
+            return tapCmd;
         return loop;
     }
     function createAdbScriptBuilder() {
